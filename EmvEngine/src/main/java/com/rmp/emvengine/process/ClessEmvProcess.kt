@@ -4,15 +4,13 @@ import com.rmp.emvengine.data.TlvObject
 
 interface ClessEmvProcess {
 
-    fun preprocessing(data: List<TlvObject>): List<TlvObject>?
+    fun preprocessing(data: List<TlvObject>)
 
-    fun initiateTransaction(data: List<TlvObject>)
+    fun initiateTransaction()
 
     fun readRecord()
 
-    fun offlineDataAuthentication()
-
-    fun processingRestriction()
+    fun offlineDataAuthenticationAndProcessingRestriction()
 
     fun cardholderVerification()
 
@@ -21,5 +19,7 @@ interface ClessEmvProcess {
     fun terminalActionAnalysis()
 
     fun cardActionlActionAnalysis()
+
+    fun getLastError(): String?
 
 }

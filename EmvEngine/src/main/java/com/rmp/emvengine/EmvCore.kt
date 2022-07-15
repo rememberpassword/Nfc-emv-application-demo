@@ -31,9 +31,9 @@ interface EmvCore {
 
     fun completionTransaction(data: List<TlvObject>): CompletionTransactionResult
 
-    fun getData(tag: Long): ByteArray
+    fun getData(tag: Long): ByteArray?
 
-    fun getData(tag: String): ByteArray
+    fun getData(tag: String): ByteArray?
 
     fun terminate()
 }
@@ -44,17 +44,17 @@ enum class EntryMode {
 }
 
 data class CompletionTransactionResult(
-    val error: EmvError?,
-    val transactionDecision: TransactionDecision
+    val error: EmvError? = null,
+    val transactionDecision: TransactionDecision? = null,
 )
 
 data class CvmResult(
-    val error: EmvError?,
-    val nextCvm: CvmMethod?,
-    val isVerifyOfflinePin: Boolean?,
-    val capk: Capk?,
-    val random: ByteArray?,
-    val isNeedEncrypt: Boolean?
+    val error: EmvError? = null,
+    val nextCvm: CvmMethod?= null,
+    val isVerifyOfflinePin: Boolean?= null,
+    val capk: Capk?= null,
+    val random: ByteArray?= null,
+    val isNeedEncrypt: Boolean?= null,
 
 )
 

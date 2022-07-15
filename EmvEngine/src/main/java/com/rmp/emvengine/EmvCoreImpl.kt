@@ -1,12 +1,13 @@
 package com.rmp.emvengine
 
+import android.util.Log
 import com.rmp.emvengine.common.toHexString
 import com.rmp.emvengine.data.*
 import com.rmp.emvengine.process.EntryPoint
 import com.rmp.emvengine.process.EntryPointImpl
 
 class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
-
+    private val TAG = "EmvCoreImpl"
     private var transactionData = TransactionData()
     private var _entryMode: EntryMode? = null
     private lateinit var entryPoint: EntryPoint
@@ -32,7 +33,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         } else {
             TODO()
         }
-        if (candidateList == null || entryPoint.getLastError() != 0) {
+        if (candidateList == null || entryPoint.getLastError() != null) {
             return StartAppSelectionResult(error = EmvError.OTHER_ERROR, null)
         }
         if (candidateList.isEmpty()) {
@@ -51,7 +52,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         } else {
             TODO()
         }
-        if (entryPoint.getLastError() != 0) {
+        if (entryPoint.getLastError() != null) {
             return FinalAppSelectionResult(error = EmvError.OTHER_ERROR, null, null)
         }
         if (_entryMode == EntryMode.CLESS) {
@@ -59,7 +60,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         } else {
             TODO()
         }
-        if (entryPoint.getLastError() != 0) {
+        if (entryPoint.getLastError() != null) {
             return FinalAppSelectionResult(error = EmvError.OTHER_ERROR, null, null)
         }
 
@@ -72,11 +73,77 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
     }
 
     override fun startTransaction(data: List<TlvObject>): StartTransactionResult {
-        TODO("Not yet implemented")
+        if (cardReader.isCardRemoved()) {
+            return StartTransactionResult(error = EmvError.COMMUNICATE_ERROR)
+        }
+        if (_entryMode == EntryMode.CLESS) {
+            entryPoint.preprocessing(data)
+        } else {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return StartTransactionResult(error = EmvError.OTHER_ERROR)
+        }
+        if (_entryMode == EntryMode.CLESS) {
+            entryPoint.initiateTransaction()
+        } else {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return StartTransactionResult(error = EmvError.OTHER_ERROR)
+        }
+        if (_entryMode == EntryMode.CLESS) {
+            entryPoint.readRecord()
+        } else {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return StartTransactionResult(error = EmvError.OTHER_ERROR)
+        }
+        return StartTransactionResult(error = null)
+
     }
 
     override fun processTransaction(data: List<TlvObject>): ProcessTransactionResult {
-        TODO("Not yet implemented")
+
+
+        if (cardReader.isCardRemoved()) {
+            return ProcessTransactionResult(error = EmvError.COMMUNICATE_ERROR, null)
+        }
+        if (_entryMode == EntryMode.CLESS) {
+            entryPoint.offlineDataAuthenticationAndProcessingRestriction()
+        } else {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+        }
+        if (_entryMode == EntryMode.CLESS) {
+
+            entryPoint.cardholderVerification(listOf())
+            if (entryPoint.getLastError() != null) {
+                Log.d(TAG, "last error:" + entryPoint.getLastError())
+                return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+            }
+
+            entryPoint.terminalRiskManagement()
+            if (entryPoint.getLastError() != null) {
+                Log.d(TAG, "last error:" + entryPoint.getLastError())
+                return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+            }
+
+            entryPoint.cardActionlActionAnalysis()
+            if (entryPoint.getLastError() != null) {
+                Log.d(TAG, "last error:" + entryPoint.getLastError())
+                return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+            }
+        }
+        return ProcessTransactionResult(error = null, cvm = transactionData.cvm)
+
     }
 
     override fun cardholderVerification(
@@ -84,23 +151,61 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         pinEntryStatus: PinEntryStatus?,
         offPinVerifyResult: OffPinVerifyResult?
     ): CvmResult {
-        TODO("Not yet implemented")
+        if (_entryMode == EntryMode.CLESS) {
+            if (transactionData.cvm == CvmMethod.ONLINE_PIN) {
+                if (cvmAccept != true || pinEntryStatus != PinEntryStatus.EXC_SUCCESS) {
+                    //decline txn when cvm fail
+                    transactionData.transactionDecision = TransactionDecision.AAC
+                }
+
+            } else if (transactionData.cvm == CvmMethod.CDCVM) {
+                //TODO( impl late)
+            }
+        } else {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return CvmResult(error = EmvError.OTHER_ERROR)
+        }
+        return CvmResult()
     }
 
     override fun riskManagement(): TransactionDecision {
-        TODO("Not yet implemented")
+        if (_entryMode == EntryMode.CONTACT) {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return TransactionDecision.AAC
+        }
+        return transactionData.transactionDecision
     }
 
     override fun completionTransaction(data: List<TlvObject>): CompletionTransactionResult {
-        TODO("Not yet implemented")
+        if (_entryMode == EntryMode.CLESS) {
+            val hostAuthCode = data.firstOrNull {
+                it.tag == 0x8AL
+            }?.valueString
+            if (hostAuthCode in HostAuthResponseCode.LIST_APPROVE_RESPONSE) {
+                transactionData.transactionDecision = TransactionDecision.TC
+            }
+        } else {
+            TODO()
+        }
+        if (entryPoint.getLastError() != null) {
+            Log.d(TAG, "last error:" + entryPoint.getLastError())
+            return CompletionTransactionResult(error = EmvError.OTHER_ERROR)
+        }
+        return CompletionTransactionResult(transactionDecision = transactionData.transactionDecision)
     }
 
-    override fun getData(tag: Long): ByteArray {
-        TODO("Not yet implemented")
+    override fun getData(tag: Long): ByteArray? {
+        return transactionData.getData(tag)
     }
 
-    override fun getData(tag: String): ByteArray {
-        TODO("Not yet implemented")
+    override fun getData(tag: String): ByteArray? {
+        return getData(tag.toLong(16))
     }
 
     override fun terminate() {

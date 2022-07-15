@@ -1,5 +1,6 @@
 package com.rmp.emvengine.common
 
+import com.rmp.emvengine.data.TlvObject
 import kotlin.experimental.or
 
 object CommandHelper {
@@ -63,10 +64,11 @@ object CommandHelper {
     fun buildGPOCmd(data: ByteArray): ByteArray {
         val clazz = 0x80.toByte()
         val ins = 0xA8.toByte()
-        val lc = data.size.toByte()
+        val tag83 = TlvObject(0x83L,data).toString().hexToByteArray()
+        val lc = tag83.size.toByte()
         val le = 0x00.toByte()
 
-        return byteArrayOf(clazz, ins, 0, 0, lc).plus(data).plus(le)
+        return byteArrayOf(clazz, ins, 0, 0, lc).plus(tag83).plus(le)
     }
 
     fun buildGenerateAC(terminalDecision: Byte, isCdaRequest: Boolean, data: ByteArray): ByteArray {

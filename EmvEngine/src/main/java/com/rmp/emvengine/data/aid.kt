@@ -2,13 +2,13 @@ package com.rmp.emvengine.data
 
 data class Aid(
     val aid: String,
-    val label: String?,
-    val priority: Int?,
-    val isPartial: Boolean?,
-    val data: List<TlvObject>?
+    val label: String? = null,
+    val priority: Int? = null,
+    val isPartial: Boolean? = null,
+    val data: List<TlvObject>? = null,
 )
 
-enum class KernelId(val value: Int){
+enum class KernelId(val value: Int) {
     EMV(0),
     VISA(3),
     MASTER(2),

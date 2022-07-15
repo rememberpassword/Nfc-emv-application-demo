@@ -8,6 +8,7 @@ class TransactionData {
     var cvm : CvmMethod? = null
     var kernelId: KernelId? = null
     val recordOda: MutableMap<Long,TlvObject> = mutableMapOf()
+    var isFddaSuccess = false
 
 
 

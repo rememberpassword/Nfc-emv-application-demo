@@ -13,15 +13,13 @@ interface EntryPoint {
 
     fun kernelActivation()
 
-    fun initiateTransaction(data: List<TlvObject>)
+    fun initiateTransaction()
 
     fun readRecord()
 
-    fun offlineDataAuthentication()
+    fun offlineDataAuthenticationAndProcessingRestriction()
 
-    fun processingRestriction()
-
-    fun cardholderVerification()
+    fun cardholderVerification(data: List<TlvObject>)
 
     fun terminalRiskManagement()
 
@@ -29,6 +27,6 @@ interface EntryPoint {
 
     fun cardActionlActionAnalysis()
 
-    fun getLastError(): Int
+    fun getLastError(): String?
 
 }
