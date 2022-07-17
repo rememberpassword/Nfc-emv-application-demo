@@ -1,4 +1,4 @@
-package com.rmp.emvnfcdemo
+package com.rmp.emvnfcdemo.transaction.cardreader
 
 import android.annotation.SuppressLint
 import android.app.Activity

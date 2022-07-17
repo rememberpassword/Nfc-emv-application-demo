@@ -1,4 +1,4 @@
-package com.rmp.emvnfcdemo
+package com.rmp.emvnfcdemo.transaction
 
 import android.app.Activity
 import android.util.Log
@@ -12,6 +12,7 @@ import com.rmp.emvengine.data.EmvTags
 import com.rmp.emvengine.data.PinEntryStatus
 import com.rmp.emvengine.data.TlvObject
 import com.rmp.emvengine.data.TransactionDecision
+import com.rmp.emvnfcdemo.transaction.cardreader.CardReaderIpml
 
 class EmvProcess(private val activity: Activity, private val updateUi: (String) -> Unit) {
     private val TAG = "EmvProcess"

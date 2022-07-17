@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import com.rmp.emvnfcdemo.transaction.EmvProcess
 import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
