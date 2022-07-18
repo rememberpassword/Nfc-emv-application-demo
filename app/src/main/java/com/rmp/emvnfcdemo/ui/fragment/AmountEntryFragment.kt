@@ -1,6 +1,7 @@
 package com.rmp.emvnfcdemo.ui.fragment
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,11 +22,7 @@ class AmountEntryFragment(
     private val currencies: List<Currency>
 ) : Fragment() {
 
-    private var amount = "0"
-    set(value) {
-        updateUI()
-        field = value
-    }
+    private var amount = ""
     private var currencySelected: Currency? = null
 
     private var tvAmount : TextView? = null
@@ -34,7 +31,7 @@ class AmountEntryFragment(
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_amount_entry,container)
+        return inflater.inflate(R.layout.fragment_amount_entry,container,false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -69,15 +66,16 @@ class AmountEntryFragment(
 
         view.findViewById<TextView>(R.id.btn_confirm).setOnClickListener {
             currencySelected?.let {
-                cb.invoke(Amount(amount.toLong(),it))
+                cb.invoke(Amount(amount.toLongOrNull() ?: 0,it))
             }
         }
         view.findViewById<TextView>(R.id.btn_clear).setOnClickListener {
-            amount = "0"
+            amount = ""
+            updateUI()
         }
         val numberListener = View.OnClickListener {
             when(it.id){
-                R.id.btn0 -> amount += "0"
+                R.id.btn0 -> if(amount.isNotEmpty()) amount += "0"
                 R.id.btn1 -> amount += "1"
                 R.id.btn2 -> amount += "2"
                 R.id.btn3 -> amount += "3"
@@ -88,6 +86,7 @@ class AmountEntryFragment(
                 R.id.btn8 -> amount += "8"
                 R.id.btn9 -> amount += "9"
             }
+            updateUI()
         }
         view.findViewById<TextView>(R.id.btn0).setOnClickListener(numberListener)
         view.findViewById<TextView>(R.id.btn1).setOnClickListener(numberListener)

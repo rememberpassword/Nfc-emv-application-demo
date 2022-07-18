@@ -17,7 +17,7 @@ class LoadingFragment(private val title: String): Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_loading,container)
+        return inflater.inflate(R.layout.fragment_loading,container,false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

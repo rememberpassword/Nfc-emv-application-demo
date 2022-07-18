@@ -2,7 +2,7 @@ package com.rmp.emvengine.process
 
 import com.rmp.emvengine.data.TlvObject
 
-interface ClessEmvProcess {
+internal interface ClessEmvProcess {
 
     fun preprocessing(data: List<TlvObject>)
 

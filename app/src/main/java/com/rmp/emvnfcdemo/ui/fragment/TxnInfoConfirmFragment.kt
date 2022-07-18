@@ -25,7 +25,7 @@ class TxnInfoConfirmFragment(
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_transaction_info_confirm, container)
+        return inflater.inflate(R.layout.fragment_transaction_info_confirm, container,false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

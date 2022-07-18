@@ -19,7 +19,7 @@ interface EmvCore {
 
     fun startTransaction(data: List<TlvObject>): StartTransactionResult
 
-    fun processTransaction(data: List<TlvObject>): ProcessTransactionResult
+    fun processTransaction(data: List<TlvObject>, capk: Capk?): ProcessTransactionResult
 
     fun cardholderVerification(
         cvmAccept: Boolean?,

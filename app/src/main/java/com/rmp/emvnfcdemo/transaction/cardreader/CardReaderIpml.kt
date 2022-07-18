@@ -23,11 +23,10 @@ class CardReaderIpml(private val activity: Activity) : CardReader {
     private var isoDep: IsoDep? = null
     private var _isCardIn = false
     var channel = Channel<Boolean>()
-    override suspend fun detectClessCardAndActive(): Boolean {
+    override suspend fun detectClessCardAndActive(detectTime: Int): Boolean {
         channel = Channel()
         val nfcAdapter = NfcAdapter.getDefaultAdapter(activity)
         val opts = Bundle()
-        val detectTime = 10000
         opts.putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, detectTime)
 
         var flags = NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
@@ -58,6 +57,7 @@ class CardReaderIpml(private val activity: Activity) : CardReader {
     override fun close(){
         channel.close()
         isoDep?.close()
+        defaultJob.cancelChildren()
         _isCardIn = false
         isoDep = null
     }

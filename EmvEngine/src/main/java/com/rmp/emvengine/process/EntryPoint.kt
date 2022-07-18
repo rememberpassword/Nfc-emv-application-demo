@@ -3,7 +3,7 @@ package com.rmp.emvengine.process
 import com.rmp.emvengine.data.Aid
 import com.rmp.emvengine.data.TlvObject
 
-interface EntryPoint {
+internal interface EntryPoint {
 
     fun preprocessing(data: List<TlvObject>)
 

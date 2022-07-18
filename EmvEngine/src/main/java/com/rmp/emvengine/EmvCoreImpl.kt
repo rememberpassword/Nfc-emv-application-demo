@@ -34,7 +34,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             TODO()
         }
         if (candidateList == null || entryPoint.getLastError() != null) {
-            return StartAppSelectionResult(error = EmvError.OTHER_ERROR, null)
+            return StartAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null)
         }
         if (candidateList.isEmpty()) {
             return StartAppSelectionResult(error = EmvError.NO_APPLICATION, null)
@@ -53,7 +53,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             TODO()
         }
         if (entryPoint.getLastError() != null) {
-            return FinalAppSelectionResult(error = EmvError.OTHER_ERROR, null, null)
+            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null)
         }
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.kernelActivation()
@@ -61,7 +61,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             TODO()
         }
         if (entryPoint.getLastError() != null) {
-            return FinalAppSelectionResult(error = EmvError.OTHER_ERROR, null, null)
+            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null)
         }
 
         val cardAid = transactionData.cardData[0x84]
@@ -83,7 +83,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return StartTransactionResult(error = EmvError.OTHER_ERROR)
+            return StartTransactionResult(error = entryPoint.getLastError()?.toEmvError())
         }
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.initiateTransaction()
@@ -92,7 +92,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return StartTransactionResult(error = EmvError.OTHER_ERROR)
+            return StartTransactionResult(error = entryPoint.getLastError()?.toEmvError())
         }
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.readRecord()
@@ -101,18 +101,19 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return StartTransactionResult(error = EmvError.OTHER_ERROR)
+            return StartTransactionResult(error = entryPoint.getLastError()?.toEmvError())
         }
         return StartTransactionResult(error = null)
 
     }
 
-    override fun processTransaction(data: List<TlvObject>): ProcessTransactionResult {
+    override fun processTransaction(data: List<TlvObject>, capk: Capk?): ProcessTransactionResult {
 
 
         if (cardReader.isCardRemoved()) {
             return ProcessTransactionResult(error = EmvError.COMMUNICATE_ERROR, null)
         }
+        transactionData.capk = capk
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.offlineDataAuthenticationAndProcessingRestriction()
         } else {
@@ -120,26 +121,26 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+            return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
         }
         if (_entryMode == EntryMode.CLESS) {
 
             entryPoint.cardholderVerification(listOf())
             if (entryPoint.getLastError() != null) {
                 Log.d(TAG, "last error:" + entryPoint.getLastError())
-                return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+                return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
             }
 
             entryPoint.terminalRiskManagement()
             if (entryPoint.getLastError() != null) {
                 Log.d(TAG, "last error:" + entryPoint.getLastError())
-                return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+                return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
             }
 
             entryPoint.cardActionlActionAnalysis()
             if (entryPoint.getLastError() != null) {
                 Log.d(TAG, "last error:" + entryPoint.getLastError())
-                return ProcessTransactionResult(error = EmvError.OTHER_ERROR, null)
+                return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
             }
         }
         return ProcessTransactionResult(error = null, cvm = transactionData.cvm)
@@ -166,7 +167,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return CvmResult(error = EmvError.OTHER_ERROR)
+            return CvmResult(error = entryPoint.getLastError()?.toEmvError())
         }
         return CvmResult()
     }
@@ -195,7 +196,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return CompletionTransactionResult(error = EmvError.OTHER_ERROR)
+            return CompletionTransactionResult(error = entryPoint.getLastError()?.toEmvError())
         }
         return CompletionTransactionResult(transactionDecision = transactionData.transactionDecision)
     }
@@ -209,6 +210,6 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
     }
 
     override fun terminate() {
-        TODO("Not yet implemented")
+        //TODO("Not yet implemented")
     }
 }

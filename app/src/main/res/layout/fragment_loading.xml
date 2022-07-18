@@ -25,14 +25,15 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.5" />
 
-    <com.google.android.material.progressindicator.LinearProgressIndicator
+    <ProgressBar
         android:id="@+id/progress_bar"
-        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="236dp"
         android:layout_height="66dp"
+        android:layout_marginBottom="4dp"
         android:indeterminate="true"
         app:layout_constraintBottom_toTopOf="@+id/guideline8"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent" />
 
     <TextView

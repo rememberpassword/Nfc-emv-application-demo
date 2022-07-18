@@ -3,7 +3,7 @@ package com.rmp.emvengine.common
 import com.rmp.emvengine.data.TlvObject
 import kotlin.experimental.or
 
-object CommandHelper {
+internal object CommandHelper {
 
     fun buildSelectCmd(
         isSelectByName: Boolean = true,

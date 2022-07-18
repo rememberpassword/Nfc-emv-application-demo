@@ -32,6 +32,10 @@ interface UiController {
         timeout: Long = 3000L
     ): UiAction?
 
+    suspend fun showWarning(title: String,timeout: Long = 2000L): UiAction?
+
+    suspend fun showError(title: String,timeout: Long = 2000L): UiAction?
+
 }
 
 enum class UiAction {

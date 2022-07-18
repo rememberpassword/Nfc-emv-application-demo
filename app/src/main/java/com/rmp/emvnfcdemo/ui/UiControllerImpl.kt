@@ -1,21 +1,26 @@
 package com.rmp.emvnfcdemo.ui
 
+import android.app.Activity
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
 import com.rmp.emvengine.data.TransactionDecision
 import com.rmp.emvnfcdemo.data.Amount
 import com.rmp.emvnfcdemo.data.Currency
 import com.rmp.emvnfcdemo.data.TransactionType
 import com.rmp.emvnfcdemo.ui.fragment.AmountEntryFragment
 import com.rmp.emvnfcdemo.ui.fragment.DetectCardFragment
-import com.rmp.emvnfcdemo.ui.fragment.TxnResultFragment
+import com.rmp.emvnfcdemo.ui.fragment.ErrorFragment
 import com.rmp.emvnfcdemo.ui.fragment.LoadingFragment
 import com.rmp.emvnfcdemo.ui.fragment.TxnInfoConfirmFragment
+import com.rmp.emvnfcdemo.ui.fragment.TxnResultFragment
+import com.rmp.emvnfcdemo.ui.fragment.WarningFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 
-class UiControllerImpl(private val fragmentManager: FragmentManager, private val containerId: Int) :
+class UiControllerImpl(private val activity: FragmentActivity, private val containerId: Int) :
     UiController {
 
 
@@ -38,7 +43,7 @@ class UiControllerImpl(private val fragmentManager: FragmentManager, private val
         amount: Amount
     ): UiAction? {
         val channel = Channel<UiAction>()
-        val fragment = DetectCardFragment(amount = amount.toDisplayAmount(), cb = {
+        val fragment = DetectCardFragment(amount = amount.toAmountWithCurrency(), cb = {
             channel.trySend(it)
         })
         show(fragment)
@@ -61,7 +66,7 @@ class UiControllerImpl(private val fragmentManager: FragmentManager, private val
         val channel = Channel<UiAction>()
         val fragment = TxnInfoConfirmFragment(
             title = transactionType.value,
-            amount = amount.toDisplayAmount(),
+            amount = amount.toAmountWithCurrency(),
             pan = pan,
             expDate = expiredDate,
             txnDate = txnDate,
@@ -88,11 +93,38 @@ class UiControllerImpl(private val fragmentManager: FragmentManager, private val
         return channel.receiveCatching().getOrNull()
     }
 
+    override suspend fun showWarning(title: String, timeout: Long): UiAction? {
+        val channel = Channel<UiAction>()
+        val fragment = WarningFragment(
+            title = title,
+            timeout = timeout,
+            cb = {
+                channel.trySend(it)
+            })
+        show(fragment)
+        return channel.receiveCatching().getOrNull()
+    }
+
+    override suspend fun showError(title: String, timeout: Long): UiAction? {
+        val channel = Channel<UiAction>()
+        val fragment = ErrorFragment(
+            title = title,
+            timeout = timeout,
+            cb = {
+                channel.trySend(it)
+            })
+        show(fragment)
+        return channel.receiveCatching().getOrNull()
+    }
+
     private fun show(screen: Fragment) {
         runBlocking(Dispatchers.Main) {
-            fragmentManager.beginTransaction().apply {
-                replace(containerId, screen)
-                commit()
+            //check activity visible or not
+            if (activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                activity.supportFragmentManager.beginTransaction().apply {
+                    replace(containerId, screen)
+                    commit()
+                }
             }
         }
     }

@@ -4,6 +4,7 @@ import android.util.Log
 import com.rmp.emvengine.CardReader
 import com.rmp.emvengine.common.*
 import com.rmp.emvengine.data.CvmMethod
+import com.rmp.emvengine.data.EmvCoreError
 import com.rmp.emvengine.data.EmvTags
 import com.rmp.emvengine.data.TlvObject
 import com.rmp.emvengine.data.TransactionData
@@ -17,13 +18,13 @@ internal class VisaClessProcess(
     private val cardReader: CardReader,
     private val transactionData: TransactionData
 ) : ClessEmvProcess {
-    private var lastError: String? = null
+    private var lastError: EmvCoreError? = null
 
     override fun preprocessing(data: List<TlvObject>) {
         //check mandatory tag
         val isEnough = checkMandatoryTags(data)
         if (!isEnough) {
-            lastError = "1"
+            lastError = EmvCoreError.MISSING_TAG
             return
         }
         data.forEach {
@@ -35,7 +36,7 @@ internal class VisaClessProcess(
             transactionData.terminalData[EmvTags.EMV_CL_TRANS_LIMIT.value]?.value?.toHexString()
                 ?.toLong()!!
         if (amount > txnLimit) {
-            lastError = "1"
+            lastError = EmvCoreError.TXN_EXCEED_LIMIT
             return
         }
 
@@ -93,7 +94,7 @@ internal class VisaClessProcess(
         Log.d("EntryPointImpl", "tagPDOL: $tagPDOL")
         val pdol = tagPDOL?.value?.toPDOL()
         if (tagPDOL == null || pdol == null) {
-            lastError = "2"
+            lastError = EmvCoreError.NULL_PDOL
             return
         }
 
@@ -104,7 +105,7 @@ internal class VisaClessProcess(
             val v = transactionData.terminalData[it.first]?.value?.also {
                 pdolData = pdolData.plus(it)
             } ?: kotlin.run {
-                lastError = "2"
+                lastError = EmvCoreError.NULL_PDOL_DATA
                 return
             }
             Log.d("EntryPointImpl", "tag:${it.first.toString(16)}| ${v.toHexString()}")
@@ -113,18 +114,18 @@ internal class VisaClessProcess(
         val gpoCmd = CommandHelper.buildGPOCmd(pdolData)
         val gpoResponse = cardReader.transmitData(gpoCmd)
         if (gpoResponse.error != null || gpoResponse.data == null || gpoResponse.data.size < 2) {
-            lastError = "2"
+            lastError = EmvCoreError.NOT_RECEIVE_APDU
             return
         }
         if (!gpoResponse.data.isAPDUSuccess()) {
             //apdu error
-            lastError = "2"
+            lastError = EmvCoreError.APDU_ERROR
             return
         }
         val status =
             parseGPO(gpoResponse.data.copyOfRange(0,gpoResponse.data.size - 2))
         if (!status) {
-            lastError = "3"
+            lastError = EmvCoreError.APDU_RESPONSE_WRONG_FORMAT
             return
         }
         transactionData.transactionDecision =
@@ -141,7 +142,7 @@ internal class VisaClessProcess(
                 if (transactionData.cardData[it.tag] == null) {
                     transactionData.cardData[it.tag] = it
                 } else {
-                    lastError = "4"
+                    lastError = EmvCoreError.DUPLICATE_CARD_DATA
                     return false
                 }
 
@@ -166,7 +167,7 @@ internal class VisaClessProcess(
                         if (transactionData.cardData[it.tag] == null) {
                             transactionData.cardData[it.tag] = it
                         } else {
-                            lastError = "5"
+                            lastError = EmvCoreError.DUPLICATE_CARD_DATA
                             return
                         }
                         if (isForOda) {
@@ -200,7 +201,6 @@ internal class VisaClessProcess(
     private fun performFDDA(): Boolean {
         val isCardSupportFDDA = transactionData.cardData[0x82]!!.value.checkBitOn(1, 6)
         if (!isCardSupportFDDA) {
-            lastError = "6"
             return false
         }
         //TODO("will impl late")
@@ -236,10 +236,11 @@ internal class VisaClessProcess(
             } else {
                 if (transactionData.cardData[0x9F6C]?.value?.checkBitOn(1, 3) == true) {
                     Log.w("EMV", "try other interface")
-                    lastError = "7"
+                    lastError = EmvCoreError.TRY_OTHER_INTERFACE
 
                 } else {
-                    lastError = "8"
+                    //decline
+                    transactionData.transactionDecision  = TransactionDecision.AAC
                 }
                 return
             }
@@ -256,9 +257,10 @@ internal class VisaClessProcess(
             } else {
                 if (transactionData.cardData[0x9F6C]?.value?.checkBitOn(1, 2) == true) {
                     Log.w("EMV", "try other interface")
-                    lastError = "7"
+                    lastError = EmvCoreError.TRY_OTHER_INTERFACE
                 } else {
-                    lastError = "8"
+                    //decline
+                    transactionData.transactionDecision  = TransactionDecision.AAC
                 }
                 return
             }
@@ -331,7 +333,7 @@ internal class VisaClessProcess(
     }
 
     override fun getLastError(): String? {
-        return lastError
+        return lastError?.code
     }
 
     private fun checkMandatoryTags(data: List<TlvObject>): Boolean {

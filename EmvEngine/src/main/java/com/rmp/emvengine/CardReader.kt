@@ -2,7 +2,7 @@ package com.rmp.emvengine
 
 interface CardReader {
 
-    suspend fun detectClessCardAndActive(): Boolean
+    suspend fun detectClessCardAndActive(detectTime: Int): Boolean
 
     fun close()
 

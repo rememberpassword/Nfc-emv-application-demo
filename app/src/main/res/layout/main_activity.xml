@@ -6,6 +6,7 @@
     android:layout_height="match_parent">
 
     <FrameLayout
+        android:id="@+id/main_content"
         android:layout_width="409dp"
         android:layout_height="729dp"
         app:layout_constraintBottom_toBottomOf="parent"

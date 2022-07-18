@@ -28,7 +28,7 @@ class TxnResultFragment(
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_txn_result, container)
+        return inflater.inflate(R.layout.fragment_txn_result, container,false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

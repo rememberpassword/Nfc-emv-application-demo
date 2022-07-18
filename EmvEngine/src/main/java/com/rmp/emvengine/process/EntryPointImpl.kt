@@ -8,7 +8,7 @@ import com.rmp.emvengine.common.isAPDUSuccess
 import com.rmp.emvengine.common.toHexString
 import com.rmp.emvengine.data.*
 
-class EntryPointImpl(
+internal class EntryPointImpl(
     private val cardReader: CardReader,
     private val transactionData: TransactionData
 ) : EntryPoint {
@@ -27,12 +27,14 @@ class EntryPointImpl(
         val response = cardReader.transmitData(cmd)
 
         if (response.error != null || response.data == null || response.data.size < 2) {
-            lastError = "1"
+            lastError =
+                EmvErrorLevel.APP_SELECTION.code + EmvCoreError.NOT_RECEIVE_APDU.code
             return null
         }
         if (!response.data.isAPDUSuccess()) {
             //apdu error
-            lastError = "1"
+            lastError =
+                EmvErrorLevel.APP_SELECTION.code + EmvCoreError.APDU_ERROR.code
             return null
         }
 
@@ -128,18 +130,19 @@ class EntryPointImpl(
         //send select aid
         val response = cardReader.transmitData(cmd)
         if (response.error != null || response.data == null) {
-            lastError = "2"
+            lastError = EmvErrorLevel.FINAL_SELECT.code + EmvCoreError.NOT_RECEIVE_APDU.code
             return
         }
         if (!response.data.isAPDUSuccess()) {
             //apdu error
-            lastError = "2"
+            lastError = EmvErrorLevel.FINAL_SELECT.code + EmvCoreError.APDU_ERROR.code
             return
         }
         //parse select aid response
         val status = parsePPSEFinalSelect(response.data)
         if (!status) {
-            lastError = "2"
+            lastError =
+                EmvErrorLevel.FINAL_SELECT.code + EmvCoreError.APDU_RESPONSE_WRONG_FORMAT.code
             return
         }
 
@@ -181,7 +184,7 @@ class EntryPointImpl(
         if (appKernelId == null) {
             val aid = transactionData.terminalData[0x4F]?.value?.toHexString()
             if (aid == null) {
-                lastError = "3"
+                lastError = EmvErrorLevel.KERNEL_ACTIVATION.code + EmvCoreError.MISSING_TAG.code
                 return
             }
             when {
@@ -192,7 +195,8 @@ class EntryPointImpl(
                 aid.startsWith("A000000065") -> transactionData.kernelId = KernelId.JCB
                 aid.startsWith("A000000333") -> transactionData.kernelId = KernelId.POBC
                 else -> {
-                    lastError = "3"
+                    lastError =
+                        EmvErrorLevel.KERNEL_ACTIVATION.code + EmvCoreError.KERNEL_ABSENT.code
                     return
                 }
             }
@@ -205,7 +209,8 @@ class EntryPointImpl(
                 KernelId.DISCOVER.value -> KernelId.VISA
                 KernelId.POBC.value -> KernelId.VISA
                 else -> {
-                    lastError = "3"
+                    lastError =
+                        EmvErrorLevel.KERNEL_ACTIVATION.code + EmvCoreError.KERNEL_ABSENT.code
                     return
                 }
             }
@@ -215,7 +220,7 @@ class EntryPointImpl(
             KernelId.VISA -> VisaClessProcess(cardReader, transactionData)
             KernelId.MASTER -> TODO()
             else -> {
-                lastError = "3"
+                lastError = EmvErrorLevel.KERNEL_ACTIVATION.code + EmvCoreError.KERNEL_ABSENT.code
                 return
             }
         }
@@ -225,7 +230,7 @@ class EntryPointImpl(
     override fun preprocessing(data: List<TlvObject>) {
         clessEmvProcess.preprocessing(data)
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "4" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.PREPROCESSING.code + clessEmvProcess.getLastError()
         }
     }
 
@@ -233,7 +238,7 @@ class EntryPointImpl(
         //send GPO cmd
         clessEmvProcess.initiateTransaction()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "5" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.INITIATE_TXN.code + clessEmvProcess.getLastError()
         }
     }
 
@@ -241,14 +246,14 @@ class EntryPointImpl(
         ///read record if have AFL
         clessEmvProcess.readRecord()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "6" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.READ_RECORD.code + clessEmvProcess.getLastError()
         }
     }
 
     override fun offlineDataAuthenticationAndProcessingRestriction() {
         clessEmvProcess.offlineDataAuthenticationAndProcessingRestriction()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "7" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.ODA_PROCESS.code + clessEmvProcess.getLastError()
         }
 
     }
@@ -256,28 +261,28 @@ class EntryPointImpl(
     override fun cardholderVerification(data: List<TlvObject>) {
         clessEmvProcess.cardholderVerification()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "8" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.CARDHOLDER_VERIFY.code + clessEmvProcess.getLastError()
         }
     }
 
     override fun terminalRiskManagement() {
         clessEmvProcess.terminalRiskManagement()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "9" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.TERMINAL_RISK.code + clessEmvProcess.getLastError()
         }
     }
 
     override fun terminalActionAnalysis() {
         clessEmvProcess.terminalActionAnalysis()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "10" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.TERMINAL_ACTION_ANALYSIS.code + clessEmvProcess.getLastError()
         }
     }
 
     override fun cardActionlActionAnalysis() {
         clessEmvProcess.cardActionlActionAnalysis()
         if (clessEmvProcess.getLastError() != null) {
-            lastError = "11" + clessEmvProcess.getLastError()
+            lastError = EmvErrorLevel.FIRST_GAC.code + clessEmvProcess.getLastError()
         }
     }
 
