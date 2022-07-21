@@ -9,3 +9,4 @@ dependencyResolutionManagement {
 rootProject.name = "EMV Nfc demo"
 include ':app'
 include ':EmvEngine'
+include ':Secure'

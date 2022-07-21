@@ -22,17 +22,17 @@ import com.rmp.emvnfcdemo.data.toTrack2
 import com.rmp.emvnfcdemo.transaction.cardreader.CardReaderIpml
 import com.rmp.emvnfcdemo.ui.UiAction
 import com.rmp.emvnfcdemo.ui.UiController
+import com.rmp.secure.SecureEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class EmvProcess(private val activity: Activity, private val uiController: UiController) {
+class EmvProcess(private val activity: Activity, private val uiController: UiController, private val secureEngine: SecureEngine) {
     private val TAG = "EmvProcess"
 
     private var cardReader: CardReaderIpml? = null
@@ -75,22 +75,22 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
                 EmvError.COMMUNICATE_ERROR,
                 EmvError.PRESENT_CARD_AGAIN -> {
                     stopTransaction()
-                    uiController.showWarning("Please remove and tap card again.")
+                    uiController.showWarningScreen("Please remove and tap card again.")
                     return captureCard()
                 }
                 EmvError.KERNEL_ABSENT -> {
                     stopTransaction()
-                    uiController.showError("Card not support.")
+                    uiController.showErrorScreen("Card not support.")
                     return false
                 }
                 EmvError.NO_APPLICATION -> {
                     stopTransaction()
-                    uiController.showError("No application available.")
+                    uiController.showErrorScreen("No application available.")
                     return false
                 }
                 else -> {
                     stopTransaction()
-                    uiController.showError("EMV ERROR.")
+                    uiController.showErrorScreen("EMV ERROR.")
                     return false
                 }
             }
@@ -105,17 +105,17 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
                 EmvError.COMMUNICATE_ERROR,
                 EmvError.PRESENT_CARD_AGAIN -> {
                     stopTransaction()
-                    uiController.showWarning("Please remove and tap card again.")
+                    uiController.showWarningScreen("Please remove and tap card again.")
                     return captureCard()
                 }
                 EmvError.TXN_EXCEED_LIMIT -> {
                     stopTransaction()
-                    uiController.showError("Exceed transaction limit.")
+                    uiController.showErrorScreen("Exceed transaction limit.")
                     return false
                 }
                 else -> {
                     stopTransaction()
-                    uiController.showError("EMV ERROR.")
+                    uiController.showErrorScreen("EMV ERROR.")
                     return false
                 }
             }
@@ -161,7 +161,7 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
         }
         collectEmvData()
         //show removed card screen
-        uiController.showWarning("Please, remove card!")
+        uiController.showWarningScreen("Please, remove card!")
         //
         val uiAction = uiController.showConfirmInfoScreen(
             transactionType = transactionData.transactionType,
@@ -254,7 +254,7 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
             }
             false -> {
                 //timeout
-                uiController.showError("Timeout")
+                uiController.showErrorScreen("Timeout")
                 return false
             }
             null -> {
@@ -276,7 +276,7 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
         ) ?: Amount(0, Currency.USD)
     }
 
-    private fun processCvm(cvm: CvmMethod?): Boolean {
+    private suspend fun processCvm(cvm: CvmMethod?): Boolean {
         if (cvm == CvmMethod.ONLINE_PIN) {
             val status = showPinEntry()
             Log.d(TAG, "-> Pin entry status: $status")
@@ -287,10 +287,16 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
         return true
     }
 
-    private fun showPinEntry(): PinEntryStatus {
-        //TODO("Not yet implemented")
-        return PinEntryStatus.EXC_SUCCESS
-
+    private suspend fun showPinEntry(): PinEntryStatus {
+        uiController.showPinEntryScreen()
+        val pinResult = secureEngine.getPinEntry().showPinEntry(transactionData.pan!!)
+        val pinEntryStatus = when(pinResult.pinEntryStatus){
+            com.rmp.secure.pin.PinEntryStatus.ERROR -> PinEntryStatus.ERROR
+            com.rmp.secure.pin.PinEntryStatus.PIN_ENTERED -> PinEntryStatus.EXC_SUCCESS
+            com.rmp.secure.pin.PinEntryStatus.CANCEL -> PinEntryStatus.CANCEL
+            com.rmp.secure.pin.PinEntryStatus.BYPASS -> PinEntryStatus.BYPASS
+        }
+        return pinEntryStatus
     }
 
     private fun buildStartTransactionData(amount: Amount): List<TlvObject> {

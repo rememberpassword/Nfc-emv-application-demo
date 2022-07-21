@@ -3,6 +3,7 @@
     package="com.rmp.emvnfcdemo">
 
     <uses-permission android:name="android.permission.NFC"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 
     <application
         android:allowBackup="true"
@@ -12,13 +13,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EMVNfcDemo">
         <activity
-            android:name=".MainActivity"
+            android:name=".MainActivity">
+
+        </activity>
+        <activity android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
     </application>
 

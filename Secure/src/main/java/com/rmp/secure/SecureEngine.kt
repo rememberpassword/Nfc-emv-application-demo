@@ -1,13 +1,11 @@
 package com.rmp.secure
 
 import android.content.Context
+import com.rmp.secure.pin.PinEntry
 
-class SecureEngine(val context: Context) {
+class SecureEngine(private val context: Context) {
 
-    fun showPinEntry(pan: String){
-
-
-
-
+    fun getPinEntry(): PinEntry{
+        return PinEntry(context)
     }
 }

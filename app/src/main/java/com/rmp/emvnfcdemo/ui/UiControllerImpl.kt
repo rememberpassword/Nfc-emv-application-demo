@@ -13,6 +13,7 @@ import com.rmp.emvnfcdemo.ui.fragment.AmountEntryFragment
 import com.rmp.emvnfcdemo.ui.fragment.DetectCardFragment
 import com.rmp.emvnfcdemo.ui.fragment.ErrorFragment
 import com.rmp.emvnfcdemo.ui.fragment.LoadingFragment
+import com.rmp.emvnfcdemo.ui.fragment.PinEntryFragment
 import com.rmp.emvnfcdemo.ui.fragment.TxnInfoConfirmFragment
 import com.rmp.emvnfcdemo.ui.fragment.TxnResultFragment
 import com.rmp.emvnfcdemo.ui.fragment.WarningFragment
@@ -93,7 +94,7 @@ class UiControllerImpl(private val activity: FragmentActivity, private val conta
         return channel.receiveCatching().getOrNull()
     }
 
-    override suspend fun showWarning(title: String, timeout: Long): UiAction? {
+    override suspend fun showWarningScreen(title: String, timeout: Long): UiAction? {
         val channel = Channel<UiAction>()
         val fragment = WarningFragment(
             title = title,
@@ -105,7 +106,7 @@ class UiControllerImpl(private val activity: FragmentActivity, private val conta
         return channel.receiveCatching().getOrNull()
     }
 
-    override suspend fun showError(title: String, timeout: Long): UiAction? {
+    override suspend fun showErrorScreen(title: String, timeout: Long): UiAction? {
         val channel = Channel<UiAction>()
         val fragment = ErrorFragment(
             title = title,
@@ -115,6 +116,11 @@ class UiControllerImpl(private val activity: FragmentActivity, private val conta
             })
         show(fragment)
         return channel.receiveCatching().getOrNull()
+    }
+
+    override fun showPinEntryScreen() {
+        val fragment = PinEntryFragment()
+        show(fragment)
     }
 
     private fun show(screen: Fragment) {
