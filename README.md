@@ -1,5 +1,5 @@
-# Nfc-emv-demo
+# Nfc emv application demo
 
-The demo nfc emv transaction
+The demo emv transaction with NFC.
 
 Card scheme support: VISA
