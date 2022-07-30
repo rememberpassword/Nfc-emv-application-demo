@@ -12,6 +12,7 @@ import com.rmp.emvengine.data.TransactionDecision
 import com.rmp.emvengine.data.toPDOL
 import com.rmp.emvengine.data.toTlvObjects
 import com.rmp.emvengine.process.ClessEmvProcess
+import com.rmp.emvengine.process.oda.OdaProcess
 import kotlin.random.Random
 
 internal class VisaClessProcess(
@@ -123,7 +124,7 @@ internal class VisaClessProcess(
             return
         }
         val status =
-            parseGPO(gpoResponse.data.copyOfRange(0,gpoResponse.data.size - 2))
+            parseGPO(gpoResponse.data.copyOfRange(0, gpoResponse.data.size - 2))
         if (!status) {
             lastError = EmvCoreError.APDU_RESPONSE_WRONG_FORMAT
             return
@@ -161,17 +162,19 @@ internal class VisaClessProcess(
             cmdReadRecord.forEach { (cmd, isForOda) ->
                 val readRecordResponse = cardReader.transmitData(cmd)
                 if (readRecordResponse.data?.isAPDUSuccess() == true) {
-                    readRecordResponse.data.toTlvObjects()?.firstOrNull {
+                    readRecordResponse.data.copyOfRange(0,readRecordResponse.data.size - 2).toTlvObjects()?.firstOrNull {
                         it.tag == 0x70L
-                    }?.value?.toTlvObjects()?.forEach {
-                        if (transactionData.cardData[it.tag] == null) {
-                            transactionData.cardData[it.tag] = it
-                        } else {
-                            lastError = EmvCoreError.DUPLICATE_CARD_DATA
-                            return
+                    }?.value?.apply {
+                        toTlvObjects()?.forEach {
+                            if (transactionData.cardData[it.tag] == null) {
+                                transactionData.cardData[it.tag] = it
+                            } else {
+                                lastError = EmvCoreError.DUPLICATE_CARD_DATA
+                                return
+                            }
                         }
                         if (isForOda) {
-                            transactionData.recordOda[it.tag] = it
+                            transactionData.recordOda = transactionData.recordOda + this
                         }
                     }
 
@@ -195,17 +198,139 @@ internal class VisaClessProcess(
         if (transactionData.cardData[0x9F27]?.value.toTransactionDecision() == TransactionDecision.TC) {
             //offline txn need perform ODA
             transactionData.isFddaSuccess = performFDDA()
+            if(!transactionData.isFddaSuccess){
+                transactionData.transactionDecision = TransactionDecision.AAC
+            }
         }
     }
 
     private fun performFDDA(): Boolean {
         val isCardSupportFDDA = transactionData.cardData[0x82]!!.value.checkBitOn(1, 6)
         if (!isCardSupportFDDA) {
+            LogUtils.e("Card not support fDDA")
             return false
         }
-        //TODO("will impl late")
+        if (!checkCapk()) {
+            LogUtils.e("Capk not correct")
+            return false
+        }
+        //run fdda
 
-        return true
+        val odaProcess = OdaProcess()
+        LogUtils.d("Start retrieval Issuer Public Key")
+        val issuerPKCert = transactionData.getData(0x90) ?: kotlin.run {
+            LogUtils.e(" Missing Issuer Public Key Certificate")
+            return false
+        }
+        val issuerExp = transactionData.getData(0x9F32) ?: kotlin.run {
+            LogUtils.e(" Missing Issuer Public Key Exponent")
+            return false
+        }
+        val issuerPKRemainder = transactionData.getData(0x92)
+        val issuerPK = odaProcess.decipherIssuerPublicKey(
+            capk = transactionData.capk!!,
+            issuerCertificate = issuerPKCert,
+            issuerExponent = issuerExp,
+            issuerPublicKeyRemainder = issuerPKRemainder
+        )
+        if (issuerPK == null) {
+            LogUtils.e("Retrieval Issuer Public Key FAIL")
+            return false
+        }
+        LogUtils.d("Retrieval Issuer Public Key SUCCESS")
+        LogUtils.d("Start retrieval ICC Public Key")
+
+        val iccPKCert = transactionData.getData(0x9F46) ?: kotlin.run {
+            LogUtils.e(" Missing ICC Public Key Certificate")
+            return false
+        }
+        val iccExp = transactionData.getData(0x9F47) ?: kotlin.run {
+            LogUtils.e(" Missing ICC Public Key Exponent")
+            return false
+        }
+        val iccRemainder = transactionData.getData(0x9F48)
+
+        val offlineAuthenticationRecords = transactionData.recordOda
+
+        var sdaTagListData: ByteArray? = byteArrayOf()
+        if(transactionData.getData(0x9F4A) == null){
+            sdaTagListData = null
+        }else if (transactionData.getData(0x9F4A)?.size == 1 && transactionData.getData(0x9F4A)
+                ?.first() == 0x82.toByte()
+        ) {
+            sdaTagListData = transactionData.getData(0x82)!!
+        } else {
+            LogUtils.e(" SDA Tag list not ONLY contain AIP.")
+            return false
+        }
+
+        val iccPk = odaProcess.decipherICCPublicKey(
+            issuerPublicKey = issuerPK,
+            iccPKCertificate = iccPKCert,
+            iccExponent = iccExp,
+            iccPublicKeyRemainder = iccRemainder,
+            offlineAuthenticationRecords = offlineAuthenticationRecords,
+            aip = sdaTagListData
+        )
+        if (iccPk == null) {
+            LogUtils.e("Retrieval ICC Public Key FAIL")
+            return false
+        }
+        LogUtils.d("Retrieval ICC Public Key SUCCESS")
+        LogUtils.d("Start verify SDA data")
+
+        val sdad = transactionData.getData(0x9F4B) ?: kotlin.run {
+            LogUtils.e(" Missing Signed Dynamic Application Data")
+            return false
+        }
+
+        //9F37,9F02,5F2A,9F69
+        val tag9F37 = transactionData.getData(0x9F37)!!
+        val tag9F02 = transactionData.getData(0x9F02)!!
+        val tag5F2A = transactionData.getData(0x5F2A)!!
+        val tag9F69 = transactionData.getData(0x9F69) ?: kotlin.run {
+            LogUtils.e(" Missing Card Authentication Related Data")
+            return false
+        }
+        val terminalDynamicData = tag9F37 + tag9F02 + tag5F2A + tag9F69
+        LogUtils.d("terminalDynamicData: ${terminalDynamicData.toHexString()}")//C901E2E0000000001800097801253996170000
+        val result = odaProcess.verifyDDA(
+            iccPublicKey = iccPk,
+            sdad = sdad,
+            terminalDynamicData = terminalDynamicData
+        )
+
+        if (result) {
+            LogUtils.d("Perform fDDA success.")
+        } else {
+            LogUtils.e("Perform fDDA fail.")
+        }
+
+        return result
+    }
+
+    private fun checkCapk(): Boolean {
+
+        val rid = transactionData.getData(0x4F)?.copyOfRange(0, 5)
+        val capkIndex = transactionData.getData(0x8F)
+        val capk = transactionData.capk
+        if (rid == null || capk == null || capkIndex == null) {
+            LogUtils.e("Missing capk: $capk, capkIndex:$capkIndex, rid: $rid")
+            return false
+        } else if (capk.rid.contentEquals(rid) && capkIndex.toHexString().toInt(16) == capk.index) {
+            if (capk.sha == null) {
+                return true
+            } else if (capk.sha.contentEquals(RSAHelper.calculateSHA1(capk.modulus))) {
+                return true
+            } else {
+                LogUtils.d("CAPK verify hash fail.")
+                return false
+            }
+
+        } else {
+            LogUtils.e("Capk not match")
+            return false
+        }
     }
 
     private fun processingRestriction() {
@@ -240,7 +365,7 @@ internal class VisaClessProcess(
 
                 } else {
                     //decline
-                    transactionData.transactionDecision  = TransactionDecision.AAC
+                    transactionData.transactionDecision = TransactionDecision.AAC
                 }
                 return
             }
@@ -260,7 +385,7 @@ internal class VisaClessProcess(
                     lastError = EmvCoreError.TRY_OTHER_INTERFACE
                 } else {
                     //decline
-                    transactionData.transactionDecision  = TransactionDecision.AAC
+                    transactionData.transactionDecision = TransactionDecision.AAC
                 }
                 return
             }

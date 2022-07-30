@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.rmp.emvnfcdemo.transaction.EmvProcess
 import com.rmp.emvnfcdemo.ui.UiControllerImpl
+import com.rmp.secure.SecureEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,7 +20,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.main_activity)
 
         CoroutineScope(Dispatchers.Default+defaultJob).launch {
-            emvProcess = EmvProcess(this@MainActivity,UiControllerImpl(this@MainActivity,R.id.main_content))
+            emvProcess = EmvProcess(this@MainActivity,UiControllerImpl(this@MainActivity,R.id.main_content), SecureEngine(this@MainActivity))
             executeTransaction()
         }
     }
@@ -38,7 +39,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         CoroutineScope(Dispatchers.Default+defaultJob).launch {
-            emvProcess = EmvProcess(this@MainActivity,UiControllerImpl(this@MainActivity,R.id.main_content))
+            emvProcess = EmvProcess(this@MainActivity,UiControllerImpl(this@MainActivity,R.id.main_content), SecureEngine(this@MainActivity))
             executeTransaction()
         }
     }

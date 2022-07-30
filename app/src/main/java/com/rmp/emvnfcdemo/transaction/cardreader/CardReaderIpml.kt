@@ -11,6 +11,7 @@ import android.util.Log
 import com.rmp.emvengine.CardReader
 import com.rmp.emvengine.CardReaderError
 import com.rmp.emvengine.TransmitResult
+import com.rmp.emvengine.common.hexToByteArray
 import com.rmp.emvengine.common.toHexString
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel

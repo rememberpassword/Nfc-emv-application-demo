@@ -64,7 +64,8 @@ data class ProcessTransactionResult(
 )
 
 data class StartTransactionResult(
-    val error: EmvError?
+    val error: EmvError?,
+    val capkIndex: Int? = null
 )
 
 data class FinalAppSelectionResult(

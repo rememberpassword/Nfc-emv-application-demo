@@ -103,8 +103,9 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
             return StartTransactionResult(error = entryPoint.getLastError()?.toEmvError())
         }
-        return StartTransactionResult(error = null)
-
+        return StartTransactionResult(
+            error = null,
+            capkIndex = transactionData.getData(0x8F)?.toHexString()?.toInt(16))
     }
 
     override fun processTransaction(data: List<TlvObject>, capk: Capk?): ProcessTransactionResult {

@@ -7,7 +7,7 @@ internal class TransactionData {
     var transactionDecision: TransactionDecision = TransactionDecision.AAC
     var cvm : CvmMethod? = null
     var kernelId: KernelId? = null
-    val recordOda: MutableMap<Long,TlvObject> = mutableMapOf()
+    var recordOda: ByteArray = byteArrayOf()
     var isFddaSuccess = false
     var capk: Capk? = null
 

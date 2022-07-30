@@ -5,9 +5,11 @@ import android.util.Log
 import com.rmp.emvengine.EmvCore
 import com.rmp.emvengine.EmvCoreImpl
 import com.rmp.emvengine.EntryMode
+import com.rmp.emvengine.common.hexToByteArray
 import com.rmp.emvengine.common.toBcd
 import com.rmp.emvengine.common.toHexString
 import com.rmp.emvengine.data.Aid
+import com.rmp.emvengine.data.Capk
 import com.rmp.emvengine.data.CvmMethod
 import com.rmp.emvengine.data.EmvError
 import com.rmp.emvengine.data.EmvTags
@@ -151,10 +153,18 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
             return Pair(false, startTransactionResult.error)
         }
         Log.d(TAG, "->Start transaction success")
+        Log.d(TAG,"->CAPK index:${startTransactionResult.capkIndex?.toString(16)}")
         //
         Log.d(TAG, "-->Process transaction")
         val dataUpdate = listOf<TlvObject>()
-        val processTransactionResult = emvCore.processTransaction(dataUpdate, null)
+        val visaCapk92 = Capk(
+            index = 0x92,
+            rid = "A000000003".hexToByteArray(),
+            modulus = "996AF56F569187D09293C14810450ED8EE3357397B18A2458EFAA92DA3B6DF6514EC060195318FD43BE9B8F0CC669E3F844057CBDDF8BDA191BB64473BC8DC9A730DB8F6B4EDE3924186FFD9B8C7735789C23A36BA0B8AF65372EB57EA5D89E7D14E9C7B6B557460F10885DA16AC923F15AF3758F0F03EBD3C5C2C949CBA306DB44E6A2C076C5F67E281D7EF56785DC4D75945E491F01918800A9E2DC66F60080566CE0DAF8D17EAD46AD8E30A247C9F".hexToByteArray(),
+            exponent = "03".hexToByteArray(),
+            sha = null
+        )
+        val processTransactionResult = emvCore.processTransaction(dataUpdate, visaCapk92)
         if (processTransactionResult.error != null) {
             Log.d(TAG, "->Error: ${processTransactionResult.error}")
             return Pair(false, processTransactionResult.error)

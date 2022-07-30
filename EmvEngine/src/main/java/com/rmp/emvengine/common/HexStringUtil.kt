@@ -107,6 +107,11 @@ fun ByteArray.checkBitOn(byteIndex: Int, bit: Int): Boolean {
 
 }
 
+fun Byte.toPosInit(): Int {
+    val i = this.toInt()
+    return if (i < 0) i + 256 else i
+}
+
 fun ByteArray?.toTransactionDecision(): TransactionDecision{
     return when(this?.get(0)){
         TransactionDecision.TC.value.toByte() -> TransactionDecision.TC

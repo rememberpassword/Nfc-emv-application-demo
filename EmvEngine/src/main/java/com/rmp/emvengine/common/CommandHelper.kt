@@ -27,12 +27,12 @@ internal object CommandHelper {
         val aflItem = mutableListOf<Byte>()
         afl.forEach {
             aflItem.add(it)
-            if (afl.size >= 4) {
+            if (aflItem.size >= 4) {
                 //gen cmd read record
-                val sfl = afl[0].or(0x04)
-                val srec = afl[1]
-                val erec = afl[2]
-                val odaNumberRec = afl[3]
+                val sfl = aflItem[0].or(0x04)
+                val srec = aflItem[1]
+                val erec = aflItem[2]
+                val odaNumberRec = aflItem[3]
                 var count = 0
                 for (recordIndex in srec..erec) {
                     count += 1
