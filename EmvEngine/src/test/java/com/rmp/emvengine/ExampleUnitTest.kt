@@ -50,7 +50,7 @@ class ExampleUnitTest {
 
 
     @Test
-    fun ttt(){
+    fun testDDA(){
       val masterCapkF1 = Capk(
           index = 0xF1,
           rid = "A000000004".hexToByteArray(),
@@ -99,6 +99,42 @@ class ExampleUnitTest {
 
 
     }
+
+    @Test
+    fun testSDA(){
+        val capkF1 = Capk(
+            index = 0xF1,
+            rid = "A000000004".hexToByteArray(),
+            modulus = "AF0754EAED977043AB6F41D6312AB1E22A6809175BEB28E70D5F99B2DF18CAE73519341BBBD327D0B8BE9D4D0E15F07D36EA3E3A05C892F5B19A3E9D3413B0D97E7AD10A5F5DE8E38860C0AD004B1E06F4040C295ACB457A788551B6127C0B29".hexToByteArray(),
+            exponent = "03".hexToByteArray(),
+            sha = null
+        )
+        val issuerCer = "191AB5AC03365D5E9515C398CCC5C744A728A4FCFDE194D0B88B0FA1673AEBDD8AAADF0EDBBC12414E7107A9F2B02DFB3985167C0EE9CDF3CB78749BF6D0AAE60E4C979F7E2AE635A77451B0E2F2EB136AB02076CBE1E70CC4EE5529434A9EC6".hexToByteArray()
+        val issuerExp = "03".hexToByteArray()
+        val issuerRemainder = "CFB8D4885D960967179F982D42CE54ECC2054683".hexToByteArray()
+
+        val issuerPk = OdaProcessHelper.decipherIssuerPublicKey(
+            capk = capkF1,
+            issuerCertificate = issuerCer,
+            issuerExponent = issuerExp,
+            issuerPublicKeyRemainder = issuerRemainder
+        )
+        println("issuerMod:${issuerPk?.modulus?.toHexString()}")
+        println("issuerExp:${issuerPk?.exponent?.toHexString()}")
+
+        val sdad = "110BB9DF2D21981906B29A301411F9FA60CF494DBABABF54B1797C9C4B5D99B5E67AB73049E771FC5FDC23E58350B781005324D31DC87AD0FBF636733808056D66074632711E7CBF14073796E1B60D4D".hexToByteArray()
+        val odaRecord = "5A0847617390010100105F340101".hexToByteArray()
+
+        val result = OdaProcessHelper.verifySDA(
+            issuerPublicKey = issuerPk!!,
+            sdad = sdad,
+            offlineAuthenticationRecords = odaRecord
+        )
+
+        println("result: $result")
+
+    }
+
     @Test
     fun cccc(){
 
