@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream
 import java.security.NoSuchAlgorithmException
 import java.util.*
 
-class OdaProcess {
+object OdaProcessHelper {
 
 
     /**
@@ -308,7 +308,8 @@ class OdaProcess {
     fun verifyDDA(
         iccPublicKey: RSAPublicKey,
         sdad: ByteArray,
-        terminalDynamicData: ByteArray
+        terminalDynamicData: ByteArray,
+        signedDataFormatExpect: Byte = 0x05.toByte()
     ): Boolean{
         val decipheredData: ByteArray = RSAHelper.decipher(
             dataEncipher = sdad,
@@ -326,8 +327,8 @@ class OdaProcess {
 
         val signedDataFormat = stream.read().toByte()
 
-        if (signedDataFormat != 0x05.toByte()) {
-            LogUtils.e("Signed Data Format != 0x05")
+        if (signedDataFormat != signedDataFormatExpect) {
+            LogUtils.e("Signed Data Format != ${signedDataFormatExpect.toString(16)}")
             return false
         }
 
@@ -390,5 +391,103 @@ class OdaProcess {
 
         return true
 
+    }
+
+    fun verifyFDDA(
+        iccPublicKey: RSAPublicKey,
+        sdad: ByteArray,
+        terminalDynamicData: ByteArray,
+        isOfflineTxn: Boolean
+    ): Boolean {
+        return if (isOfflineTxn) {
+            verifyDDA(iccPublicKey, sdad, terminalDynamicData)
+        } else {
+            verifyDDA(iccPublicKey, sdad, terminalDynamicData, 0x95.toByte())
+        }
+    }
+
+    fun verifySDA(
+        issuerPublicKey: RSAPublicKey,
+        sdad: ByteArray,
+        offlineAuthenticationRecords: ByteArray,
+        signedDataFormatExpect: Byte = 0x03.toByte()
+    ): Boolean{
+
+        //If the Signed Static Application Data has a length different from
+        //the length of the Issuer Public Key Modulus, SDA has failed.
+        if (sdad.size != issuerPublicKey.modulus.size) {
+            LogUtils.e("Invalid Signed Data: Signed data length (" + sdad.size + ") != Issuer Public Key Modulus length(" + issuerPublicKey.modulus.size + ")")
+            return false
+        }
+
+        val decipheredBytes: ByteArray = RSAHelper.decipher(
+            dataEncipher = sdad,
+            exponent = issuerPublicKey.exponent,
+            modulus = issuerPublicKey.modulus
+        )
+
+        val stream = ByteArrayInputStream(decipheredBytes)
+
+        if (stream.read() != 0x6a) { //Header
+            LogUtils.e("Header != 0x6a")
+            return false
+        }
+
+        val signedDataFormat = stream.read().toByte()
+
+        if (signedDataFormat != signedDataFormatExpect) {
+            LogUtils.e("Invalid Signed Data format")
+            return false
+        }
+
+        val hashAlgorithmIndicator = stream.read() and 0xFF
+        val dataAuthenticationCode = ByteArray(2)
+        stream.read(dataAuthenticationCode, 0, dataAuthenticationCode.size)
+
+        //Now read the padding bytes (0xbb)
+        //The padding bytes are not used
+        val padding = ByteArray(stream.available() - 21)
+        stream.read(padding, 0, padding.size)
+
+
+        val hash = ByteArray(20)
+        stream.read(hash, 0, hash.size)
+
+        val hashStream = ByteArrayOutputStream()
+
+        hashStream.write(signedDataFormat.toInt())
+        hashStream.write(hashAlgorithmIndicator)
+        hashStream.write(dataAuthenticationCode, 0, dataAuthenticationCode.size)
+        hashStream.write(padding, 0, padding.size)
+
+        hashStream.write(offlineAuthenticationRecords, 0, offlineAuthenticationRecords.size)
+
+        var sha1Result: ByteArray? = null
+        sha1Result = try {
+            RSAHelper.calculateSHA1(hashStream.toByteArray())
+        } catch (ex: NoSuchAlgorithmException) {
+            LogUtils.e("SHA-1 hash algorithm not available")
+            return false
+        }
+
+        if (!Arrays.equals(sha1Result, hash)) {
+            LogUtils.e("Hash is not valid")
+            return false
+        }
+
+
+        val trailer = stream.read()
+
+        if (trailer != 0xbc) { //Trailer always 0xbc
+            LogUtils.e("Trailer != 0xbc")
+            return false
+        }
+
+        if (stream.available() > 0) {
+            LogUtils.e("Error parsing Signed Static Application Data. Bytes left=" + stream.available())
+            return false
+        }
+
+        return true
     }
 }

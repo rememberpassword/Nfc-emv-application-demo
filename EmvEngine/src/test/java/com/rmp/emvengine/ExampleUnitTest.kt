@@ -3,11 +3,10 @@ package com.rmp.emvengine
 import com.rmp.emvengine.common.CommandHelper
 import com.rmp.emvengine.common.hexToByteArray
 import com.rmp.emvengine.common.toHexString
-import com.rmp.emvengine.data.Aid
 import com.rmp.emvengine.data.Capk
 import com.rmp.emvengine.data.TlvObject
 import com.rmp.emvengine.data.toTlvObjects
-import com.rmp.emvengine.process.oda.OdaProcess
+import com.rmp.emvengine.process.oda.OdaProcessHelper
 import org.junit.Test
 
 /**
@@ -63,7 +62,7 @@ class ExampleUnitTest {
         val issuerExp = "03".hexToByteArray()
         val issuerRemainder = "95B60A462970C7F18237F59FA5BB675C4185922EC4B13397FD623346AACE0416AAAD33DF".hexToByteArray()
 
-        val issuerPk = OdaProcess().decipherIssuerPublicKey(
+        val issuerPk = OdaProcessHelper.decipherIssuerPublicKey(
             capk = masterCapkF1,
             issuerCertificate = issuerCer,
             issuerExponent = issuerExp,
@@ -77,7 +76,7 @@ class ExampleUnitTest {
         val offlineAuthenticationRecords = "5A0841766622200100185F2403241231".hexToByteArray()
         val dataOfSDATagList: ByteArray? = null //only contain 82
 
-        val iccPk = OdaProcess().decipherICCPublicKey(
+        val iccPk = OdaProcessHelper.decipherICCPublicKey(
             issuerPublicKey = issuerPk!!,
             iccPKCertificate= iccCert,
             iccExponent = iccExp,
@@ -89,7 +88,7 @@ class ExampleUnitTest {
         val sdad = "1A2AD9501EAC03C21FB3EF22724599C5C84A37E00249B2B179513E4E8BD0A3D3E51E149AEA08B26F6E4CC99F70C8A5F09A8F7CF6CC6E1C75BD84C8945CE871F46F634095D4513E782A8327BC1775ED8CC2469C056B2438524C55D3BA9594A6E268998359E130982B080E9B473441E1C7B5C3FDD7D84095BCE9B7DB8087C3132A2F7BCDB3B7DC1781A05E9AFD543763180D2D1D2E9E99C3619622268BAF0ACD2C3B81B2DA1AAFBD773E86990B2987B8FC".hexToByteArray()
         val terminalDynamicData = "2C975EAC000000001800097801253996170000".hexToByteArray()
 
-        val result = OdaProcess().verifyDDA(
+        val result = OdaProcessHelper.verifyDDA(
             iccPublicKey = iccPk!!,
             sdad = sdad,
             terminalDynamicData = terminalDynamicData

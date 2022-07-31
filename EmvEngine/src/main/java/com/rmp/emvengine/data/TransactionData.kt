@@ -1,6 +1,7 @@
 package com.rmp.emvengine.data
 
 internal class TransactionData {
+
     val terminalData: MutableMap<Long,TlvObject> = mutableMapOf()
     val cardData: MutableMap<Long,TlvObject> = mutableMapOf()
     val cardAppData: MutableList<Aid> = mutableListOf()
@@ -8,8 +9,9 @@ internal class TransactionData {
     var cvm : CvmMethod? = null
     var kernelId: KernelId? = null
     var recordOda: ByteArray = byteArrayOf()
-    var isFddaSuccess = false
+    var isOdaSuccess = false
     var capk: Capk? = null
+    var odaType: OdaType? = null
 
 
 

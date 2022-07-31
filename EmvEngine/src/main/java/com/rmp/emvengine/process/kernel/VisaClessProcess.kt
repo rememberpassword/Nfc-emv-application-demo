@@ -6,13 +6,14 @@ import com.rmp.emvengine.common.*
 import com.rmp.emvengine.data.CvmMethod
 import com.rmp.emvengine.data.EmvCoreError
 import com.rmp.emvengine.data.EmvTags
+import com.rmp.emvengine.data.OdaType
 import com.rmp.emvengine.data.TlvObject
 import com.rmp.emvengine.data.TransactionData
 import com.rmp.emvengine.data.TransactionDecision
 import com.rmp.emvengine.data.toPDOL
 import com.rmp.emvengine.data.toTlvObjects
 import com.rmp.emvengine.process.ClessEmvProcess
-import com.rmp.emvengine.process.oda.OdaProcess
+import com.rmp.emvengine.process.oda.OdaProcessHelper
 import kotlin.random.Random
 
 internal class VisaClessProcess(
@@ -162,21 +163,22 @@ internal class VisaClessProcess(
             cmdReadRecord.forEach { (cmd, isForOda) ->
                 val readRecordResponse = cardReader.transmitData(cmd)
                 if (readRecordResponse.data?.isAPDUSuccess() == true) {
-                    readRecordResponse.data.copyOfRange(0,readRecordResponse.data.size - 2).toTlvObjects()?.firstOrNull {
-                        it.tag == 0x70L
-                    }?.value?.apply {
-                        toTlvObjects()?.forEach {
-                            if (transactionData.cardData[it.tag] == null) {
-                                transactionData.cardData[it.tag] = it
-                            } else {
-                                lastError = EmvCoreError.DUPLICATE_CARD_DATA
-                                return
+                    readRecordResponse.data.copyOfRange(0, readRecordResponse.data.size - 2)
+                        .toTlvObjects()?.firstOrNull {
+                            it.tag == 0x70L
+                        }?.value?.apply {
+                            toTlvObjects()?.forEach {
+                                if (transactionData.cardData[it.tag] == null) {
+                                    transactionData.cardData[it.tag] = it
+                                } else {
+                                    lastError = EmvCoreError.DUPLICATE_CARD_DATA
+                                    return
+                                }
+                            }
+                            if (isForOda) {
+                                transactionData.recordOda = transactionData.recordOda + this
                             }
                         }
-                        if (isForOda) {
-                            transactionData.recordOda = transactionData.recordOda + this
-                        }
-                    }
 
                 }
             }
@@ -195,28 +197,69 @@ internal class VisaClessProcess(
 
     private fun offlineDataAuthentication() {
         //run fDDA if need
-        if (transactionData.cardData[0x9F27]?.value.toTransactionDecision() == TransactionDecision.TC) {
+
+        if (transactionData.transactionDecision == TransactionDecision.TC &&
+            (transactionData.terminalData[0x9F66]?.value?.checkBitOn(1, 1) == true &&
+                    transactionData.cardData[0x94L] != null &&
+                    transactionData.transactionDecision == TransactionDecision.ARQC)
+        ) {
             //offline txn need perform ODA
-            transactionData.isFddaSuccess = performFDDA()
-            if(!transactionData.isFddaSuccess){
-                transactionData.transactionDecision = TransactionDecision.AAC
+            transactionData.isOdaSuccess = performODA()
+            if (!transactionData.isOdaSuccess) {
+                if (transactionData.transactionDecision == TransactionDecision.TC) {
+                    val ctq = transactionData.getData(0x9F6C)
+                    if (ctq?.checkBitOn(1, 6) == true) {
+                        //‘Go online if ODA fails’
+                        LogUtils.d("Go online when ODA fails")
+                        transactionData.transactionDecision = TransactionDecision.ARQC
+                    } else if (ctq?.checkBitOn(1, 5) == true) {
+                        //‘Switch interface if ODA fails
+                        LogUtils.e("Switch interface when ODA fails")
+                        lastError = EmvCoreError.TRY_OTHER_INTERFACE
+                        return
+                    } else {
+                        transactionData.transactionDecision = TransactionDecision.AAC
+                    }
+                } else {
+                    transactionData.transactionDecision = TransactionDecision.AAC
+                }
+
             }
         }
     }
 
-    private fun performFDDA(): Boolean {
+    private fun performODA(): Boolean {
+        transactionData.odaType = if (transactionData.cardData[0x9F4B] != null) {
+            OdaType.FDDA
+        } else if (transactionData.cardData[0x93] != null && transactionData.transactionDecision == TransactionDecision.ARQC) {
+            OdaType.SDA
+        } else {
+            null
+        }
+
+        if (transactionData.odaType == null) {
+            LogUtils.e("Transaction not support ODA")
+            return false
+        }
+
         val isCardSupportFDDA = transactionData.cardData[0x82]!!.value.checkBitOn(1, 6)
-        if (!isCardSupportFDDA) {
+        if (!isCardSupportFDDA && transactionData.odaType == OdaType.FDDA) {
             LogUtils.e("Card not support fDDA")
             return false
         }
+        val isCardSupportSDA = transactionData.cardData[0x82]!!.value.checkBitOn(1, 7)
+        if (!isCardSupportSDA && transactionData.odaType == OdaType.SDA) {
+            LogUtils.e("Card not support SDA")
+            return false
+        }
+
         if (!checkCapk()) {
             LogUtils.e("Capk not correct")
             return false
         }
         //run fdda
 
-        val odaProcess = OdaProcess()
+
         LogUtils.d("Start retrieval Issuer Public Key")
         val issuerPKCert = transactionData.getData(0x90) ?: kotlin.run {
             LogUtils.e(" Missing Issuer Public Key Certificate")
@@ -227,7 +270,7 @@ internal class VisaClessProcess(
             return false
         }
         val issuerPKRemainder = transactionData.getData(0x92)
-        val issuerPK = odaProcess.decipherIssuerPublicKey(
+        val issuerPK = OdaProcessHelper.decipherIssuerPublicKey(
             capk = transactionData.capk!!,
             issuerCertificate = issuerPKCert,
             issuerExponent = issuerExp,
@@ -253,9 +296,9 @@ internal class VisaClessProcess(
         val offlineAuthenticationRecords = transactionData.recordOda
 
         var sdaTagListData: ByteArray? = byteArrayOf()
-        if(transactionData.getData(0x9F4A) == null){
+        if (transactionData.getData(0x9F4A) == null) {
             sdaTagListData = null
-        }else if (transactionData.getData(0x9F4A)?.size == 1 && transactionData.getData(0x9F4A)
+        } else if (transactionData.getData(0x9F4A)?.size == 1 && transactionData.getData(0x9F4A)
                 ?.first() == 0x82.toByte()
         ) {
             sdaTagListData = transactionData.getData(0x82)!!
@@ -264,7 +307,7 @@ internal class VisaClessProcess(
             return false
         }
 
-        val iccPk = odaProcess.decipherICCPublicKey(
+        val iccPk = OdaProcessHelper.decipherICCPublicKey(
             issuerPublicKey = issuerPK,
             iccPKCertificate = iccPKCert,
             iccExponent = iccExp,
@@ -277,36 +320,63 @@ internal class VisaClessProcess(
             return false
         }
         LogUtils.d("Retrieval ICC Public Key SUCCESS")
-        LogUtils.d("Start verify SDA data")
 
-        val sdad = transactionData.getData(0x9F4B) ?: kotlin.run {
-            LogUtils.e(" Missing Signed Dynamic Application Data")
-            return false
+        LogUtils.d("Start verify FDDA data")
+        if (transactionData.odaType == OdaType.FDDA) {
+            val sdad = transactionData.getData(0x9F4B) ?: kotlin.run {
+                LogUtils.e(" Missing Signed Dynamic Application Data")
+                return false
+            }
+
+            //9F37,9F02,5F2A,9F69
+            val tag9F37 = transactionData.getData(0x9F37)!!
+            val tag9F02 = transactionData.getData(0x9F02)!!
+            val tag5F2A = transactionData.getData(0x5F2A)!!
+            val tag9F69 = transactionData.getData(0x9F69) ?: kotlin.run {
+                LogUtils.e(" Missing Card Authentication Related Data")
+                return false
+            }
+            val terminalDynamicData = tag9F37 + tag9F02 + tag5F2A + tag9F69
+            LogUtils.d("terminalDynamicData: ${terminalDynamicData.toHexString()}")//C901E2E0000000001800097801253996170000
+            val result = OdaProcessHelper.verifyFDDA(
+                iccPublicKey = iccPk,
+                sdad = sdad,
+                terminalDynamicData = terminalDynamicData,
+                isOfflineTxn = transactionData.transactionDecision == TransactionDecision.TC
+            )
+
+            if (result) {
+                LogUtils.d("Perform fDDA success.")
+            } else {
+                LogUtils.e("Perform fDDA fail.")
+            }
+
+            return result
         }
+        if (transactionData.odaType == OdaType.SDA) {
+            val sdad = transactionData.getData(0x93) ?: kotlin.run {
+                LogUtils.e(" Missing Signed Static Application Data")
+                return false
+            }
+            val signedDataFormatExpect =
+                if (transactionData.transactionDecision == TransactionDecision.TC) 0x03.toByte() else 0x93.toByte()
 
-        //9F37,9F02,5F2A,9F69
-        val tag9F37 = transactionData.getData(0x9F37)!!
-        val tag9F02 = transactionData.getData(0x9F02)!!
-        val tag5F2A = transactionData.getData(0x5F2A)!!
-        val tag9F69 = transactionData.getData(0x9F69) ?: kotlin.run {
-            LogUtils.e(" Missing Card Authentication Related Data")
-            return false
+            val result = OdaProcessHelper.verifySDA(
+                issuerPublicKey = issuerPK,
+                sdad = sdad,
+                offlineAuthenticationRecords = transactionData.recordOda,
+                signedDataFormatExpect = signedDataFormatExpect
+            )
+
+            if (result) {
+                LogUtils.d("Perform SDA success.")
+            } else {
+                LogUtils.e("Perform SDA fail.")
+            }
+
+            return result
         }
-        val terminalDynamicData = tag9F37 + tag9F02 + tag5F2A + tag9F69
-        LogUtils.d("terminalDynamicData: ${terminalDynamicData.toHexString()}")//C901E2E0000000001800097801253996170000
-        val result = odaProcess.verifyDDA(
-            iccPublicKey = iccPk,
-            sdad = sdad,
-            terminalDynamicData = terminalDynamicData
-        )
-
-        if (result) {
-            LogUtils.d("Perform fDDA success.")
-        } else {
-            LogUtils.e("Perform fDDA fail.")
-        }
-
-        return result
+        return false
     }
 
     private fun checkCapk(): Boolean {
