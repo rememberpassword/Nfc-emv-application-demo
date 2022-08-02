@@ -1,6 +1,6 @@
 # Nfc emv application demo
 
-The demo emv transaction with NFC.
+The demo emv transaction with NFC. Not use any lib, everything in your hand !
 
 Card scheme support: 
 - VISA
