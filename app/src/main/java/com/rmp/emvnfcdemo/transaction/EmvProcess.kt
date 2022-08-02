@@ -313,7 +313,7 @@ class EmvProcess(
     }
 
     private suspend fun processCvm(cvm: CvmMethod?): Boolean {
-        if (cvm != CvmMethod.ONLINE_PIN) {
+        if (cvm == CvmMethod.ONLINE_PIN) {
             val status = showPinEntry()
             Log.d(TAG, "-> Pin entry status: $status")
             emvCore.cardholderVerification(cvmAccept = true, pinEntryStatus = status, null)
