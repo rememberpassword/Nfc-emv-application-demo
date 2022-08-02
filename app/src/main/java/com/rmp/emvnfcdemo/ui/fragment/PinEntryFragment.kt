@@ -14,6 +14,6 @@ class PinEntryFragment: Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.pin_entry_layout,container,false)
+        return inflater.inflate(R.layout.fragment_pin_entry,container,false)
     }
 }
