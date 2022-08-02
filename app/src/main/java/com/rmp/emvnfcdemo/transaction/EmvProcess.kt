@@ -184,7 +184,7 @@ class EmvProcess(
             transactionType = transactionData.transactionType,
             amount = transactionData.amount!!,
             pan = transactionData.pan!!.maskToDisplay(),
-            expiredDate =  "****",
+            expiredDate = transactionData.expiredDate ?: "",
             txnDate = transactionData.txnDateDisplay ?: "",
             txnTime = transactionData.txnTimeDisplay ?: "",
             aid = transactionData.selectedAid?.aid ?: "",
