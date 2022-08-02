@@ -29,7 +29,7 @@ class TlvObject(val tag: Long, val value: ByteArray) {
 }
 
 fun ByteArray.toTlvObjects(): List<TlvObject>? {
-    println("data:"+this.toHexString())
+//    println("data:"+this.toHexString())
     val result = mutableListOf<TlvObject>()
     //detect tag
     var currentData = this
@@ -37,7 +37,7 @@ fun ByteArray.toTlvObjects(): List<TlvObject>? {
     while (currentData.size > 1) {
 
         val tag = currentData.detectTag() ?: return null
-        println("tag:${tag.toHexString()}")
+//        println("tag:${tag.toHexString()}")
 
         var len: Int = 0
         var lenLength = 1
@@ -64,10 +64,10 @@ fun ByteArray.toTlvObjects(): List<TlvObject>? {
         }
 
 
-        println("len: $len")
+//        println("len: $len")
 
         val value = currentData.copyOfRange(tag.size + lenLength, tag.size + lenLength + len)
-        println("value: ${value.toHexString()}")
+//        println("value: ${value.toHexString()}")
 
         result.add(TlvObject(tag.toHexString(), value))
         val currentTagSize = tag.size + lenLength + value.size

@@ -17,6 +17,8 @@ class TxnInfoConfirmFragment(
     private val expDate: String,
     private val txnDate: String,
     private val txnTime: String,
+    private val aid: String,
+    private val appName: String,
     private val cb: (UiAction) -> Unit
 ) : Fragment() {
 
@@ -36,6 +38,9 @@ class TxnInfoConfirmFragment(
         view.findViewById<TextView>(R.id.tv_exp_date).text = expDate
         view.findViewById<TextView>(R.id.tv_txn_date).text = txnDate
         view.findViewById<TextView>(R.id.tv_txn_time).text = txnTime
+        view.findViewById<TextView>(R.id.tv_aid).text = aid
+        view.findViewById<TextView>(R.id.tv_app_name).text = appName
+
         view.findViewById<Button>(R.id.btn_confirm).setOnClickListener {
             cb.invoke(UiAction.CONFIRM)
         }

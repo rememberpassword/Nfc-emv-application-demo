@@ -25,6 +25,8 @@ interface UiController {
         expiredDate: String,
         txnDate: String,
         txnTime: String,
+        aid: String,
+        appName: String,
     ): UiAction?
 
     suspend fun showTransactionResult(

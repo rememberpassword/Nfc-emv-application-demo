@@ -63,6 +63,8 @@ class UiControllerImpl(private val activity: FragmentActivity, private val conta
         expiredDate: String,
         txnDate: String,
         txnTime: String,
+        aid: String,
+        appName: String,
     ): UiAction? {
         val channel = Channel<UiAction>()
         val fragment = TxnInfoConfirmFragment(
@@ -72,6 +74,8 @@ class UiControllerImpl(private val activity: FragmentActivity, private val conta
             expDate = expiredDate,
             txnDate = txnDate,
             txnTime = txnTime,
+            aid = aid,
+            appName = appName,
             cb = {
                 channel.trySend(it)
             })

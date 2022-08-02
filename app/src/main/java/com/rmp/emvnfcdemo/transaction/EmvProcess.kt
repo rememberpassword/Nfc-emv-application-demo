@@ -177,13 +177,18 @@ class EmvProcess(
         //show removed card screen
         uiController.showWarningScreen("Please, remove card!")
         //
+        val appLabel = emvCore.getData(0x50)?.map {
+            Char(it.toInt())
+        }?.joinToString(separator = "")
         val uiAction = uiController.showConfirmInfoScreen(
             transactionType = transactionData.transactionType,
             amount = transactionData.amount!!,
             pan = transactionData.pan!!.maskToDisplay(),
-            expiredDate = transactionData.expiredDate ?: "",
+            expiredDate =  "****",
             txnDate = transactionData.txnDateDisplay ?: "",
-            txnTime = transactionData.txnTimeDisplay ?: ""
+            txnTime = transactionData.txnTimeDisplay ?: "",
+            aid = transactionData.selectedAid?.aid ?: "",
+            appName = appLabel ?: ""
         )
         if (uiAction != UiAction.CONFIRM) {
             return Pair(true, null)
@@ -242,6 +247,7 @@ class EmvProcess(
         Log.d(TAG, "-->Final select aid: ${aidSelected.aid}")
 
         var finalAppSelectionResult = emvCore.finalAppSelection(aidSelected)
+        transactionData.selectedAid = aidSelected
         while (finalAppSelectionResult.candidateList != null) {
             //need re-select aid
             Log.d(TAG, "->Select error, have other available aids")
@@ -250,6 +256,7 @@ class EmvProcess(
                     ?: finalAppSelectionResult.candidateList!!.first()
             Log.d(TAG, "->Reselect with aid: ${aidReselected.aid}")
             finalAppSelectionResult = emvCore.finalAppSelection(aidReselected)
+            transactionData.selectedAid = aidReselected
         }
 
         if (finalAppSelectionResult.error != null) {

@@ -1,5 +1,6 @@
 package com.rmp.emvnfcdemo.data
 
+import com.rmp.emvengine.data.Aid
 import com.rmp.emvengine.data.CvmMethod
 import com.rmp.emvengine.data.TransactionDecision
 
@@ -18,4 +19,5 @@ class TransactionData {
     var pan: String? = null
     var expiredDate: String? = null
     var track2: Track2? = null
+    var selectedAid: Aid? = null
 }
