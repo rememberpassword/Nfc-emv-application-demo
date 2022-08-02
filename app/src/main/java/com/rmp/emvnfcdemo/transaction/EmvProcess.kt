@@ -34,7 +34,11 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class EmvProcess(private val activity: Activity, private val uiController: UiController, private val secureEngine: SecureEngine) {
+class EmvProcess(
+    private val activity: Activity,
+    private val uiController: UiController,
+    private val secureEngine: SecureEngine
+) {
     private val TAG = "EmvProcess"
 
     private var cardReader: CardReaderIpml? = null
@@ -101,7 +105,7 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
         val startError = startTransaction(transactionData.amount!!)
         if (startError != null) {
             //cancel by user
-            if(startError.first) return false
+            if (startError.first) return false
             //got error from emv
             when (startError.second) {
                 EmvError.COMMUNICATE_ERROR,
@@ -153,7 +157,7 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
             return Pair(false, startTransactionResult.error)
         }
         Log.d(TAG, "->Start transaction success")
-        Log.d(TAG,"->CAPK index:${startTransactionResult.capkIndex?.toString(16)}")
+        Log.d(TAG, "->CAPK index:${startTransactionResult.capkIndex?.toString(16)}")
         //
         Log.d(TAG, "-->Process transaction")
         val dataUpdate = listOf<TlvObject>()
@@ -189,11 +193,11 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
         return null
     }
 
-    private fun String.maskToDisplay():String{
+    private fun String.maskToDisplay(): String {
         //visible first and last 4 digit
-        val firstDigit = this.substring(0,4)
-        val lastDigit = this.substring(this.length-4,this.length)
-        return firstDigit+ lastDigit.padStart(this.length-4,'*')
+        val firstDigit = this.substring(0, 4)
+        val lastDigit = this.substring(this.length - 4, this.length)
+        return firstDigit + lastDigit.padStart(this.length - 4, '*')
     }
 
     private fun collectEmvData() {
@@ -226,18 +230,33 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
             Log.d(TAG, "- Error no app available")
             return EmvError.NO_APPLICATION
         }
+
         startAppSelectionResult.candidateList?.forEach {
             Log.d(TAG, "-Aid:${it.aid}")
         }
+
         val aidSelected =
             startAppSelectionResult.candidateList!!.maxByOrNull { it.priority ?: 0 }
                 ?: startAppSelectionResult.candidateList!!.first()
+
         Log.d(TAG, "-->Final select aid: ${aidSelected.aid}")
-        val finalAppSelectionResult = emvCore.finalAppSelection(aidSelected)
+
+        var finalAppSelectionResult = emvCore.finalAppSelection(aidSelected)
+        while (finalAppSelectionResult.candidateList != null) {
+            //need re-select aid
+            Log.d(TAG, "->Select error, have other available aids")
+            val aidReselected =
+                finalAppSelectionResult.candidateList!!.maxByOrNull { it.priority ?: 0 }
+                    ?: finalAppSelectionResult.candidateList!!.first()
+            Log.d(TAG, "->Reselect with aid: ${aidReselected.aid}")
+            finalAppSelectionResult = emvCore.finalAppSelection(aidReselected)
+        }
+
         if (finalAppSelectionResult.error != null) {
             Log.d(TAG, "->Error: ${finalAppSelectionResult.error}")
             return finalAppSelectionResult.error
         }
+
         Log.d(TAG, "->Selected success aid: ${finalAppSelectionResult.aidSelected}")
         Log.d(TAG, "->Kernel Id: ${finalAppSelectionResult.kernelId}")
         return null
@@ -300,7 +319,7 @@ class EmvProcess(private val activity: Activity, private val uiController: UiCon
     private suspend fun showPinEntry(): PinEntryStatus {
         uiController.showPinEntryScreen()
         val pinResult = secureEngine.getPinEntry().showPinEntry(transactionData.pan!!)
-        val pinEntryStatus = when(pinResult.pinEntryStatus){
+        val pinEntryStatus = when (pinResult.pinEntryStatus) {
             com.rmp.secure.pin.PinEntryStatus.ERROR -> PinEntryStatus.ERROR
             com.rmp.secure.pin.PinEntryStatus.PIN_ENTERED -> PinEntryStatus.EXC_SUCCESS
             com.rmp.secure.pin.PinEntryStatus.CANCEL -> PinEntryStatus.CANCEL

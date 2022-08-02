@@ -71,7 +71,8 @@ data class StartTransactionResult(
 data class FinalAppSelectionResult(
     val error: EmvError?,
     val aidSelected: String?,
-    val kernelId: KernelId?
+    val kernelId: KernelId?,
+    val candidateList: List<Aid>?
 )
 
 data class StartAppSelectionResult(

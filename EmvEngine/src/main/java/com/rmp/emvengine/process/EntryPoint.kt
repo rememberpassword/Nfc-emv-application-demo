@@ -9,7 +9,7 @@ internal interface EntryPoint {
 
     fun combinationSelection(list: List<Aid>): List<Aid>?
 
-    fun finalCombinationSelection(aid: Aid)
+    fun finalCombinationSelection(aid: Aid):  List<Aid>?
 
     fun kernelActivation()
 

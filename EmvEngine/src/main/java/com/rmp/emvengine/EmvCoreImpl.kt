@@ -45,15 +45,23 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
 
     override fun finalAppSelection(aid: Aid): FinalAppSelectionResult {
         if (cardReader.isCardRemoved()) {
-            return FinalAppSelectionResult(error = EmvError.COMMUNICATE_ERROR, null, null)
+            return FinalAppSelectionResult(error = EmvError.COMMUNICATE_ERROR, null, null,null)
         }
         if (_entryMode == EntryMode.CLESS) {
-            entryPoint.finalCombinationSelection(aid)
+            val remainsCandidateList = entryPoint.finalCombinationSelection(aid)
+            if (remainsCandidateList != null) {
+                return FinalAppSelectionResult(
+                    error = null,
+                    kernelId = null,
+                    aidSelected = null,
+                    candidateList = remainsCandidateList
+                )
+            }
         } else {
             TODO()
         }
         if (entryPoint.getLastError() != null) {
-            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null)
+            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null,null)
         }
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.kernelActivation()
@@ -61,14 +69,15 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             TODO()
         }
         if (entryPoint.getLastError() != null) {
-            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null)
+            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null,null)
         }
 
         val cardAid = transactionData.cardData[0x84]
         return FinalAppSelectionResult(
             error = null,
             kernelId = transactionData.kernelId,
-            aidSelected = cardAid?.value?.toHexString()
+            aidSelected = cardAid?.value?.toHexString(),
+            candidateList = null
         )
     }
 

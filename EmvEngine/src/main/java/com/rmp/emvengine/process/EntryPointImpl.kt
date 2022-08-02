@@ -120,7 +120,7 @@ internal class EntryPointImpl(
         return true
     }
 
-    override fun finalCombinationSelection(aid: Aid) {
+    override fun finalCombinationSelection(aid: Aid):  List<Aid>? {
 
         transactionData.terminalData[0x4F] = TlvObject(0x4F, aid.aid)
 
@@ -131,21 +131,38 @@ internal class EntryPointImpl(
         val response = cardReader.transmitData(cmd)
         if (response.error != null || response.data == null) {
             lastError = EmvErrorLevel.FINAL_SELECT.code + EmvCoreError.NOT_RECEIVE_APDU.code
-            return
+            return buildRemainsCandidateList()
         }
         if (!response.data.isAPDUSuccess()) {
             //apdu error
             lastError = EmvErrorLevel.FINAL_SELECT.code + EmvCoreError.APDU_ERROR.code
-            return
+            return buildRemainsCandidateList()
         }
         //parse select aid response
         val status = parsePPSEFinalSelect(response.data)
         if (!status) {
             lastError =
                 EmvErrorLevel.FINAL_SELECT.code + EmvCoreError.APDU_RESPONSE_WRONG_FORMAT.code
-            return
+            return buildRemainsCandidateList()
         }
+        return null
 
+    }
+
+    private fun buildRemainsCandidateList(): List<Aid>? {
+
+        if (transactionData.cardData.size > 1) {
+            transactionData.cardAppData.firstOrNull {
+                it.aid == transactionData.terminalData[0x4F]?.valueString || it.aid.startsWith(
+                    transactionData.terminalData[0x4F]?.valueString!!
+                )
+            }?.let {
+                transactionData.cardAppData.remove(it)
+            }
+            return transactionData.cardAppData
+        } else {
+            return null
+        }
     }
 
     private fun parsePPSEFinalSelect(data: ByteArray): Boolean {
