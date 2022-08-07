@@ -68,6 +68,12 @@ fun ByteArray.isAPDUSuccess(): Boolean {
     return sw[0] == 0x90.toByte() && sw[1] == 0x00.toByte()
 }
 
+fun ByteArray.isAPDUConditionsOfUseNotSatisfied(): Boolean {
+    if (this.size < 2) return false
+    val sw = this.copyOfRange(this.size - 2, this.size)
+    return sw[0] == 0x69.toByte() && sw[1] == 0x85.toByte()
+}
+
 
 //byte index will start form 1
 //bit index range value from 1 -> 8

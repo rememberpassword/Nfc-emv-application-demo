@@ -11,6 +11,8 @@ internal enum class EmvCoreError(val code: String) {
     TRY_OTHER_INTERFACE("08"),
     NOT_RECEIVE_APDU("09"),
     KERNEL_ABSENT("0A"),
+    SELECT_NEXT("0B"),
+    NO_APP("0C"),
 }
 internal fun String.toEmvCoreError(): EmvCoreError = when(this){
     "01" -> EmvCoreError.MISSING_TAG
@@ -23,6 +25,8 @@ internal fun String.toEmvCoreError(): EmvCoreError = when(this){
     "08" -> EmvCoreError.TRY_OTHER_INTERFACE
     "09" -> EmvCoreError.NOT_RECEIVE_APDU
     "0A" -> EmvCoreError.KERNEL_ABSENT
+    "0B" -> EmvCoreError.SELECT_NEXT
+    "0C" -> EmvCoreError.NO_APP
     else -> {
         EmvCoreError.MISSING_TAG
     }

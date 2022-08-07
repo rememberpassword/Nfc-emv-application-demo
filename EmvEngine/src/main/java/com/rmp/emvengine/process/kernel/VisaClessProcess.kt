@@ -119,6 +119,13 @@ internal class VisaClessProcess(
             lastError = EmvCoreError.NOT_RECEIVE_APDU
             return
         }
+
+        if (gpoResponse.data.isAPDUConditionsOfUseNotSatisfied()) {
+            //Conditions of use not satisfied.
+            //select next
+            lastError = EmvCoreError.SELECT_NEXT
+            return
+        }
         if (!gpoResponse.data.isAPDUSuccess()) {
             //apdu error
             lastError = EmvCoreError.APDU_ERROR

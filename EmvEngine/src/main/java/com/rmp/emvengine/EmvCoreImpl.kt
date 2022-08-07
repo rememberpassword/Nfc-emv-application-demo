@@ -45,7 +45,7 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
 
     override fun finalAppSelection(aid: Aid): FinalAppSelectionResult {
         if (cardReader.isCardRemoved()) {
-            return FinalAppSelectionResult(error = EmvError.COMMUNICATE_ERROR, null, null,null)
+            return FinalAppSelectionResult(error = EmvError.COMMUNICATE_ERROR, null, null, null)
         }
         if (_entryMode == EntryMode.CLESS) {
             val remainsCandidateList = entryPoint.finalCombinationSelection(aid)
@@ -61,7 +61,12 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             TODO()
         }
         if (entryPoint.getLastError() != null) {
-            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null,null)
+            return FinalAppSelectionResult(
+                error = entryPoint.getLastError()?.toEmvError(),
+                null,
+                null,
+                null
+            )
         }
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.kernelActivation()
@@ -69,7 +74,12 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             TODO()
         }
         if (entryPoint.getLastError() != null) {
-            return FinalAppSelectionResult(error = entryPoint.getLastError()?.toEmvError(), null, null,null)
+            return FinalAppSelectionResult(
+                error = entryPoint.getLastError()?.toEmvError(),
+                null,
+                null,
+                null
+            )
         }
 
         val cardAid = transactionData.cardData[0x84]
@@ -101,7 +111,16 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         if (entryPoint.getLastError() != null) {
             Log.d(TAG, "last error:" + entryPoint.getLastError())
-            return StartTransactionResult(error = entryPoint.getLastError()?.toEmvError())
+            if (entryPoint.getLastError() == EmvErrorLevel.INITIATE_TXN.code + EmvCoreError.SELECT_NEXT) {
+                return StartTransactionResult(
+                    error = entryPoint.getLastError()?.toEmvError(),
+                    candidateList = transactionData.cardAppData
+                )
+
+            } else {
+                return StartTransactionResult(error = entryPoint.getLastError()?.toEmvError())
+            }
+
         }
         if (_entryMode == EntryMode.CLESS) {
             entryPoint.readRecord()
@@ -114,7 +133,8 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
         }
         return StartTransactionResult(
             error = null,
-            capkIndex = transactionData.getData(0x8F)?.toHexString()?.toInt(16))
+            capkIndex = transactionData.getData(0x8F)?.toHexString()?.toInt(16)
+        )
     }
 
     override fun processTransaction(data: List<TlvObject>, capk: Capk?): ProcessTransactionResult {
@@ -138,19 +158,28 @@ class EmvCoreImpl(private val cardReader: CardReader) : EmvCore {
             entryPoint.cardholderVerification(listOf())
             if (entryPoint.getLastError() != null) {
                 Log.d(TAG, "last error:" + entryPoint.getLastError())
-                return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
+                return ProcessTransactionResult(
+                    error = entryPoint.getLastError()?.toEmvError(),
+                    null
+                )
             }
 
             entryPoint.terminalRiskManagement()
             if (entryPoint.getLastError() != null) {
                 Log.d(TAG, "last error:" + entryPoint.getLastError())
-                return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
+                return ProcessTransactionResult(
+                    error = entryPoint.getLastError()?.toEmvError(),
+                    null
+                )
             }
 
             entryPoint.cardActionlActionAnalysis()
             if (entryPoint.getLastError() != null) {
                 Log.d(TAG, "last error:" + entryPoint.getLastError())
-                return ProcessTransactionResult(error = entryPoint.getLastError()?.toEmvError(), null)
+                return ProcessTransactionResult(
+                    error = entryPoint.getLastError()?.toEmvError(),
+                    null
+                )
             }
         }
         return ProcessTransactionResult(error = null, cvm = transactionData.cvm)

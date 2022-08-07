@@ -255,6 +255,12 @@ internal class EntryPointImpl(
         //send GPO cmd
         clessEmvProcess.initiateTransaction()
         if (clessEmvProcess.getLastError() != null) {
+            if(clessEmvProcess.getLastError() == EmvCoreError.SELECT_NEXT.code){
+                if(buildRemainsCandidateList()==null){
+                    lastError = EmvErrorLevel.INITIATE_TXN.code + EmvCoreError.NO_APP
+                    return
+                }
+            }
             lastError = EmvErrorLevel.INITIATE_TXN.code + clessEmvProcess.getLastError()
         }
     }

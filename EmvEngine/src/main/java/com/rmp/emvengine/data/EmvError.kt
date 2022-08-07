@@ -11,7 +11,8 @@ enum class EmvError(val code: Int){
     TXN_EXCEED_LIMIT(5),
     MISSING_TAG(5),
     PRESENT_CARD_AGAIN(6),
-    KERNEL_ABSENT(7)
+    KERNEL_ABSENT(7),
+    SELECT_NEXT(8)
 
 }
 
@@ -30,5 +31,7 @@ enum class EmvError(val code: Int){
         EmvCoreError.APDU_ERROR,
         EmvCoreError.NOT_RECEIVE_APDU-> EmvError.PRESENT_CARD_AGAIN
         EmvCoreError.KERNEL_ABSENT -> EmvError.KERNEL_ABSENT
+        EmvCoreError.SELECT_NEXT -> EmvError.SELECT_NEXT
+        EmvCoreError.NO_APP -> EmvError.NO_APPLICATION
     }
 }

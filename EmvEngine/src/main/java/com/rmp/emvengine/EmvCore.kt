@@ -65,7 +65,8 @@ data class ProcessTransactionResult(
 
 data class StartTransactionResult(
     val error: EmvError?,
-    val capkIndex: Int? = null
+    val capkIndex: Int? = null,
+    val candidateList: List<Aid>? = null
 )
 
 data class FinalAppSelectionResult(
